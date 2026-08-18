@@ -49,20 +49,10 @@ class TerminalService {
     return cleanPath;
   }
 
-  getUsername() {
-    try {
-      const name = (os.userInfo ? (os.userInfo().username || 'user') : 'user');
-      return name.toLowerCase().replace(/\s+/g, '_');
-    } catch (e) {
-      return 'user';
-    }
-  }
-
   getPrompt(withLeadingNewline = true) {
-    const user = this.getUsername();
     const cleanPath = this.getCleanPath();
     const prefix = withLeadingNewline ? '\r\n' : '';
-    return `${prefix}\x1b[1;32m${user}\x1b[0m:\x1b[1;34m${cleanPath}\x1b[0m$ `;
+    return `${prefix}\x1b[1;34m${cleanPath}\x1b[0m\x1b[1;32m$\x1b[0m `;
   }
 
   startSession(cwd = process.cwd()) {
@@ -72,10 +62,10 @@ class TerminalService {
     this.cursorPos = 0;
     this.historyIndex = this.history.length;
 
-    const user = this.getUsername();
     const cleanPath = this.getCleanPath();
 
-    this.emitData(`\x1b[1;32m${user}\x1b[0m:\x1b[1;34m${cleanPath}\x1b[0m$ `);
+    // Clear previous screen to avoid duplicated prompt lines
+    this.emitData(`\x1b[2J\x1b[H\x1b[1;34m${cleanPath}\x1b[0m\x1b[1;32m$\x1b[0m `);
 
     return { success: true, cwd: this.currentCwd };
   }
