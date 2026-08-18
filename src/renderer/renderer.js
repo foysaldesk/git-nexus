@@ -2019,6 +2019,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   btnTerminalSize.addEventListener('click', () => {
+    terminalDrawer.style.height = ''; // clear custom inline height
     terminalDrawer.classList.toggle('maximized');
     setTimeout(() => termManager.fit(), 220);
   });
@@ -2026,6 +2027,48 @@ document.addEventListener('DOMContentLoaded', async () => {
   btnTerminalClear.addEventListener('click', () => {
     termManager.clear();
   });
+
+  // Terminal Mouse Resizing
+  const terminalResizeHandle = document.getElementById('terminal-resize-handle');
+  let isResizingTerminal = false;
+  let termStartY = 0;
+  let termStartHeight = 0;
+
+  if (terminalResizeHandle) {
+    terminalResizeHandle.addEventListener('mousedown', (e) => {
+      if (terminalDrawer.classList.contains('collapsed')) return;
+      isResizingTerminal = true;
+      termStartY = e.clientY;
+      termStartHeight = terminalDrawer.getBoundingClientRect().height;
+      terminalDrawer.classList.remove('maximized');
+      terminalDrawer.classList.add('resizing');
+      terminalResizeHandle.classList.add('dragging');
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isResizingTerminal) return;
+      const deltaY = termStartY - e.clientY;
+      const minH = 100;
+      const maxH = Math.floor(window.innerHeight * 0.85);
+      const newHeight = Math.max(minH, Math.min(maxH, termStartHeight + deltaY));
+      terminalDrawer.style.height = `${newHeight}px`;
+      termManager.fit();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isResizingTerminal) {
+        isResizingTerminal = false;
+        terminalDrawer.classList.remove('resizing');
+        terminalResizeHandle.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        setTimeout(() => termManager.fit(), 50);
+      }
+    });
+  }
 
   document.querySelectorAll('.cmd-chip').forEach(chip => {
     chip.addEventListener('click', () => {
