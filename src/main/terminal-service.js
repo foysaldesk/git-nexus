@@ -71,6 +71,12 @@ class TerminalService {
   }
 
   write(data) {
+    if (this.activeChild) {
+      if (this.activeChild.killed || this.activeChild.exitCode !== null) {
+        this.activeChild = null;
+      }
+    }
+
     // If a command is actively running, pipe raw data directly to it
     if (this.activeChild) {
       if (data === '\x03') { // Ctrl+C: kill active process
@@ -83,6 +89,8 @@ class TerminalService {
         } catch (e) {
           try { this.activeChild.kill(); } catch (err) { /* ignore */ }
         }
+        this.activeChild = null;
+        this.emitData('^C' + this.getPrompt(true));
         return;
       }
 
@@ -381,12 +389,20 @@ class TerminalService {
         this.emitData(formatted);
       });
 
-      this.activeChild.on('close', (code) => {
+      let closed = false;
+      const onFinished = () => {
+        if (closed) return;
+        closed = true;
         this.activeChild = null;
         this.emitData(this.getPrompt(true));
-      });
+      };
+
+      this.activeChild.on('close', onFinished);
+      this.activeChild.on('exit', onFinished);
 
       this.activeChild.on('error', (err) => {
+        if (closed) return;
+        closed = true;
         this.activeChild = null;
         this.emitData(`\r\nError executing command: ${err.message}\r\n${this.getPrompt(true)}`);
       });

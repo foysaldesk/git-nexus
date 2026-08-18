@@ -2006,6 +2006,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       terminalDrawer.classList.remove('collapsed');
       termManager.fit();
       termManager.focus();
+      setTimeout(() => {
+        termManager.fit();
+        termManager.focus();
+      }, 100);
+      setTimeout(() => {
+        termManager.fit();
+        termManager.focus();
+      }, 250);
     } else {
       terminalDrawer.classList.add('collapsed');
     }
@@ -2074,10 +2082,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     chip.addEventListener('click', () => {
       const cmd = chip.getAttribute('data-cmd');
       if (terminalDrawer.classList.contains('collapsed')) {
-        toggleTerminal();
+        terminalDrawer.classList.remove('collapsed');
       }
-      termManager.sendQuickCommand(cmd);
+      termManager.fit();
       termManager.focus();
+      setTimeout(() => {
+        termManager.fit();
+        termManager.sendQuickCommand(cmd);
+        termManager.focus();
+      }, 80);
     });
   });
 
