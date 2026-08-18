@@ -11,7 +11,7 @@ function createWindow() {
     height: 850,
     minWidth: 960,
     minHeight: 600,
-    backgroundColor: '#0d1117',
+    backgroundColor: '#011c46ff',
     title: 'Git Nexus - Repository Manager',
     frame: true,
     webPreferences: {

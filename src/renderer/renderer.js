@@ -2026,10 +2026,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.cmd-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       const cmd = chip.getAttribute('data-cmd');
-      termManager.sendQuickCommand(cmd);
       if (terminalDrawer.classList.contains('collapsed')) {
         toggleTerminal();
       }
+      termManager.sendQuickCommand(cmd);
+      termManager.focus();
     });
   });
 

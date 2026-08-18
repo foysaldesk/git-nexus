@@ -53,6 +53,11 @@ class TerminalManager {
 
     this.terminal.open(this.container);
 
+    // Clicking anywhere in container focuses terminal
+    this.container.addEventListener('click', () => {
+      if (this.terminal) this.terminal.focus();
+    });
+
     // Send user keystrokes to main process
     this.terminal.onData(data => {
       window.api.writeTerminal(data);
@@ -64,7 +69,7 @@ class TerminalManager {
     });
 
     this.isInitialized = true;
-    this.fit();
+    setTimeout(() => this.fit(), 50);
 
     window.addEventListener('resize', () => this.fit());
   }
