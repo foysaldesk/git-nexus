@@ -157,15 +157,18 @@ ipcMain.handle('git:getAllRepoFiles', async (_, repoPath) => {
 });
 
 // IPC Handlers: Terminal
-ipcMain.handle('terminal:start', async (_, cwd) => {
+ipcMain.handle('terminal:start', async (event, cwd) => {
+  terminalService.init(event.sender);
   return terminalService.startSession(cwd);
 });
 
-ipcMain.on('terminal:write', (_, data) => {
+ipcMain.on('terminal:write', (event, data) => {
+  terminalService.init(event.sender);
   terminalService.write(data);
 });
 
-ipcMain.handle('terminal:setCwd', async (_, cwd) => {
+ipcMain.handle('terminal:setCwd', async (event, cwd) => {
+  terminalService.init(event.sender);
   terminalService.setCwd(cwd);
   return { success: true };
 });

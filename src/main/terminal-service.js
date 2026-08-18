@@ -6,7 +6,7 @@ const fs = require('fs');
 class TerminalService {
   constructor() {
     this.currentCwd = process.cwd();
-    this.senderWindow = null;
+    this.sender = null;
     this.activeChild = null;
     this.history = [];
     this.historyIndex = -1;
@@ -14,13 +14,27 @@ class TerminalService {
     this.cursorPos = 0;
   }
 
-  init(window) {
-    this.senderWindow = window;
+  init(windowOrWebContents) {
+    if (!windowOrWebContents) return;
+    if (windowOrWebContents.webContents) {
+      this.sender = windowOrWebContents.webContents;
+    } else {
+      this.sender = windowOrWebContents;
+    }
   }
 
   emitData(data) {
-    if (this.senderWindow && !this.senderWindow.isDestroyed()) {
-      this.senderWindow.webContents.send('terminal:data', data);
+    if (!this.sender) return;
+    try {
+      if (!this.sender.isDestroyed()) {
+        if (typeof this.sender.send === 'function') {
+          this.sender.send('terminal:data', data);
+        } else if (this.sender.webContents && typeof this.sender.webContents.send === 'function') {
+          this.sender.webContents.send('terminal:data', data);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to emit terminal data:', e);
     }
   }
 
@@ -74,8 +88,14 @@ class TerminalService {
   }
 
   handleInteractiveInput(data) {
-    // 1. Enter key (\r or \n)
-    if (data === '\r' || data === '\n' || data === '\r\n') {
+    // 1. Enter key (\r or \n) or command string with trailing newline
+    if (data === '\r' || data === '\n' || data === '\r\n' || data.endsWith('\r') || data.endsWith('\n')) {
+      const incomingCmd = data.replace(/[\r\n]+$/, '');
+      if (incomingCmd) {
+        this.currentLine += incomingCmd;
+        this.emitData(incomingCmd);
+      }
+
       const command = this.currentLine.trim();
       this.emitData('\r\n');
 
@@ -326,19 +346,15 @@ class TerminalService {
     }
 
     // 5. Spawn external command with live streaming
-    const isWindows = process.platform === 'win32';
-    const shellCmd = isWindows ? 'cmd.exe' : '/bin/sh';
-    const shellArgs = isWindows ? ['/d', '/s', '/c', cmd] : ['-c', cmd];
-
     try {
-      this.activeChild = spawn(shellCmd, shellArgs, {
+      this.activeChild = spawn(cmd, [], {
         cwd: this.currentCwd,
+        shell: true,
         env: {
           ...process.env,
           FORCE_COLOR: '1',
           TERM: 'xterm-256color'
-        },
-        windowsVerbatimArguments: true
+        }
       });
 
       this.activeChild.stdout.on('data', (d) => {
