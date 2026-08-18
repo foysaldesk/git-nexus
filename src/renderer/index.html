@@ -469,8 +469,23 @@
     <div id="modal-create-branch" class="modal-backdrop">
       <div class="modal-card">
         <div class="modal-header">
-          <span class="modal-title">Create New Branch</span>
-          <button class="branch-btn-icon modal-close-btn">&times;</button>
+          <div class="modal-header-left">
+            <div class="modal-title-icon-box">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="6" y1="3" x2="6" y2="15"></line>
+                <circle cx="18" cy="6" r="3"></circle>
+                <circle cx="6" cy="18" r="3"></circle>
+                <path d="M18 9a9 9 0 0 1-9 9"></path>
+              </svg>
+            </div>
+            <span class="modal-title">Create New Branch</span>
+          </div>
+          <button class="modal-close-icon-btn modal-close-btn" title="Close [Esc]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </div>
         <div class="modal-body">
           <div class="form-group">
@@ -497,8 +512,23 @@
     <div id="modal-merge" class="modal-backdrop">
       <div class="modal-card">
         <div class="modal-header">
-          <span class="modal-title">Merge Branch</span>
-          <button class="branch-btn-icon modal-close-btn">&times;</button>
+          <div class="modal-header-left">
+            <div class="modal-title-icon-box">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="18" cy="18" r="3"></circle>
+                <circle cx="6" cy="6" r="3"></circle>
+                <path d="M6 9v12"></path>
+                <path d="M18 15a9 9 0 0 0-9-9H6"></path>
+              </svg>
+            </div>
+            <span class="modal-title">Merge Branch</span>
+          </div>
+          <button class="modal-close-icon-btn modal-close-btn" title="Close [Esc]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </div>
         <div class="modal-body">
           <div class="form-group">
@@ -531,8 +561,21 @@
     <div id="modal-delete-branch" class="modal-backdrop">
       <div class="modal-card">
         <div class="modal-header">
-          <span class="modal-title">Delete Branch</span>
-          <button class="branch-btn-icon modal-close-btn">&times;</button>
+          <div class="modal-header-left">
+            <div class="modal-title-icon-box danger">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </div>
+            <span class="modal-title">Delete Branch</span>
+          </div>
+          <button class="modal-close-icon-btn modal-close-btn" title="Close [Esc]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </div>
         <div class="modal-body">
           <p id="delete-branch-prompt">Are you sure you want to delete branch <strong id="delete-branch-target-name"></strong>?</p>
@@ -552,8 +595,22 @@
     <div id="modal-push" class="modal-backdrop">
       <div class="modal-card">
         <div class="modal-header">
-          <span class="modal-title">Push to Remote</span>
-          <button class="branch-btn-icon modal-close-btn">&times;</button>
+          <div class="modal-header-left">
+            <div class="modal-title-icon-box">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="16 16 12 12 8 16"></polyline>
+                <line x1="12" y1="12" x2="12" y2="21"></line>
+                <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
+              </svg>
+            </div>
+            <span class="modal-title">Push to Remote</span>
+          </div>
+          <button class="modal-close-icon-btn modal-close-btn" title="Close [Esc]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </div>
         <div class="modal-body">
           <div class="form-group">
@@ -582,21 +639,47 @@
 
     <!-- File-Wise Change History Modal -->
     <div id="modal-file-history" class="modal-backdrop">
-      <div class="modal-card modal-card-wide">
-        <div class="modal-header">
-          <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 14 14"></polyline>
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            </svg>
-            <span class="modal-title">File Change History</span>
-            <span id="fh-file-path-badge" class="commit-meta-pill" style="font-family: var(--font-mono); color: #58a6ff; max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+      <div class="modal-card modal-card-wide file-history-modal-card">
+        <div class="modal-header fh-modal-header">
+          <div class="fh-header-main">
+            <div class="modal-title-icon-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 14 14"></polyline>
+              </svg>
+            </div>
+            <div class="fh-header-text">
+              <span class="modal-title">File Change History</span>
+              <div id="fh-target-path-wrapper" class="fh-target-path-wrapper" title="Click to copy file path">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+                <span id="fh-file-path-badge" class="fh-file-path-badge"></span>
+                <button id="btn-copy-fh-path" class="fh-icon-btn-inline" title="Copy file path">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <input id="input-fh-search-file" list="repo-files-datalist" type="text" class="search-commits-input" style="width: 220px;" placeholder="Search any repository file..." />
-            <datalist id="repo-files-datalist"></datalist>
-            <button class="branch-btn-icon modal-close-btn">&times;</button>
+          <div class="fh-header-controls">
+            <div class="fh-search-box-wrapper">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="fh-search-icon">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input id="input-fh-search-file" list="repo-files-datalist" type="text" class="fh-search-input" placeholder="Search any repository file..." />
+              <datalist id="repo-files-datalist"></datalist>
+            </div>
+            <button class="modal-close-icon-btn modal-close-btn" title="Close [Esc]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -605,8 +688,15 @@
           <div class="fh-split-layout">
             <!-- Left: Commits modifying this file -->
             <div class="fh-commits-pane">
-              <div class="fh-pane-header">
-                <span id="fh-revisions-count" style="font-weight: 600; color: var(--text-primary);">Revisions</span>
+              <div class="fh-pane-header fh-left-header">
+                <div class="fh-revisions-count-box">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="4"></circle>
+                    <line x1="1.05" y1="12" x2="7" y2="12"></line>
+                    <line x1="17.01" y1="12" x2="22.96" y2="12"></line>
+                  </svg>
+                  <span id="fh-revisions-count">0 Revisions</span>
+                </div>
               </div>
               <ul id="fh-commits-list" class="fh-commits-list">
                 <!-- Dynamically populated commits -->
@@ -615,13 +705,26 @@
 
             <!-- Right: Diff/Content for selected commit -->
             <div class="fh-content-pane">
-              <div class="fh-pane-header" style="justify-content: space-between;">
-                <div id="fh-selected-commit-info" style="font-size: 11px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 380px;">
+              <div class="fh-pane-header fh-right-header">
+                <div id="fh-selected-commit-info" class="fh-selected-commit-info">
                   Select a commit revision
                 </div>
-                <div class="fh-view-mode-toggles">
-                  <button id="btn-fh-view-diff" class="btn active" style="padding: 2px 8px; font-size: 11px;">Diff</button>
-                  <button id="btn-fh-view-full" class="btn" style="padding: 2px 8px; font-size: 11px;">Full File</button>
+                <div class="fh-view-mode-pill-group">
+                  <button id="btn-fh-view-diff" class="fh-mode-pill active" title="Show Git diff for this commit">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="18" y1="20" x2="18" y2="10"></line>
+                      <line x1="12" y1="20" x2="12" y2="4"></line>
+                      <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                    <span>Diff</span>
+                  </button>
+                  <button id="btn-fh-view-full" class="fh-mode-pill" title="View full file at this commit">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <span>Full File</span>
+                  </button>
                 </div>
               </div>
               <div id="fh-diff-container" class="diff-content-area fh-diff-viewer">
@@ -633,7 +736,10 @@
           </div>
         </div>
 
-        <div class="modal-footer">
+        <div class="modal-footer fh-modal-footer">
+          <div class="fh-footer-hint">
+            <span>Tip: Click any revision on the left to compare diffs</span>
+          </div>
           <button class="btn modal-cancel-btn">Close</button>
         </div>
       </div>

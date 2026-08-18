@@ -22,16 +22,6 @@ async function test() {
   console.log('getStatus staged count:', status.data?.staged.length);
   console.log('getStatus untracked count:', status.data?.untracked.length);
 
-  // 3. Stage & commit
-  console.log('Staging files...');
-  await gitService.stageFiles(repoPath, ['.']);
-  const statusAfterStage = await gitService.getStatus(repoPath);
-  console.log('Staged count after add:', statusAfterStage.data?.staged.length);
-
-  console.log('Committing test changes...');
-  const commitRes = await gitService.commit(repoPath, 'Initial commit: Git Nexus desktop application');
-  console.log('Commit result:', commitRes);
-
   // 4. Branches
   const branches = await gitService.getBranches(repoPath);
   console.log('Branches:', branches.data);

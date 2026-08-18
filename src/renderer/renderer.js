@@ -337,6 +337,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     return clean.slice(0, 2).toUpperCase();
   }
 
+  function getAvatarColor(name) {
+    if (!name) return '#2f81f7';
+    const colors = [
+      '#2f81f7', '#388bfd', '#238636', '#8957e5',
+      '#d29922', '#db61a2', '#f78166', '#0969da',
+      '#1a7f37', '#8250df', '#9a6700', '#bf3989'
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  }
+
   // Save Recent Repositories
   function saveRecentRepo(repoPath) {
     let recents = state.recentRepos.filter(p => p !== repoPath);
@@ -1146,6 +1160,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ==========================================
   // File-Wise History Modal Controller
   // ==========================================
+  // ==========================================
+  // File-Wise History Modal Controller
+  // ==========================================
   async function openFileHistoryModal(filePath = null) {
     if (!state.currentRepoPath) {
       showToast('Please open a repository first', 'error');
@@ -1163,9 +1180,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       inputFhSearchFile.value = targetPath;
       await loadFileHistory(targetPath);
     } else {
-      fhFilePathBadge.textContent = 'Search file below';
+      fhFilePathBadge.textContent = 'Select or search a file';
       fhRevisionsCount.textContent = '0 Revisions';
-      fhCommitsList.innerHTML = '<li style="padding: 16px; color: var(--text-muted);">Type or select a file to view its history</li>';
+      fhCommitsList.innerHTML = '<li style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px;">Type or search a file to inspect its full revision history</li>';
       fhDiffContainer.innerHTML = '<div class="diff-empty-state"><p>Search or pick a file to view its revision history</p></div>';
       inputFhSearchFile.focus();
     }
@@ -1177,13 +1194,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.fileHistoryTarget = filePath;
     fhFilePathBadge.textContent = filePath;
     fhRevisionsCount.textContent = 'Loading...';
-    fhCommitsList.innerHTML = '<li style="padding: 16px; color: var(--text-muted);">Fetching file revisions...</li>';
+    fhCommitsList.innerHTML = '<li style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px;">Fetching file revision timeline...</li>';
     fhDiffContainer.innerHTML = '<div class="diff-empty-state"><p>Loading diff...</p></div>';
 
     const res = await window.api.getFileHistory(state.currentRepoPath, filePath, 100);
     if (!res.success) {
       fhRevisionsCount.textContent = '0 Revisions';
-      fhCommitsList.innerHTML = `<li style="padding: 16px; color: var(--red-hover);">Error: ${res.error}</li>`;
+      fhCommitsList.innerHTML = `<li style="padding: 20px; text-align: center; color: var(--red-hover); font-size: 12px;">Error: ${escapeHtml(res.error)}</li>`;
       return;
     }
 
@@ -1191,7 +1208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     fhRevisionsCount.textContent = `${res.data.length} Revision${res.data.length === 1 ? '' : 's'}`;
 
     if (res.data.length === 0) {
-      fhCommitsList.innerHTML = '<li style="padding: 16px; color: var(--text-muted);">No commit history found for this file.</li>';
+      fhCommitsList.innerHTML = '<li style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px;">No commit history found for this file.</li>';
       fhDiffContainer.innerHTML = '<div class="diff-empty-state"><p>No commit history available for this file</p></div>';
       return;
     }
@@ -1201,6 +1218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const li = document.createElement('li');
       li.className = `fh-commit-item ${idx === 0 ? 'selected' : ''}`;
       const initials = getInitials(c.author_name);
+      const avatarColor = getAvatarColor(c.author_name);
       const relTime = formatRelativeTime(c.date);
       const shortHash = c.shortHash || c.hash.slice(0, 7);
 
@@ -1208,11 +1226,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="fh-commit-title">${escapeHtml(c.message)}</div>
         <div class="fh-commit-meta">
           <div class="commit-author-group">
-            <div class="avatar-circle">${initials}</div>
-            <span>${escapeHtml(c.author_name)}</span>
-            <span>· ${relTime}</span>
+            <div class="avatar-circle" style="background: ${avatarColor};">${initials}</div>
+            <span class="fh-author-name">${escapeHtml(c.author_name)}</span>
+            <span class="fh-date-text">· ${relTime}</span>
           </div>
-          <span class="commit-hash-pill">${shortHash}</span>
+          <span class="commit-hash-pill" title="Commit ${shortHash}">${shortHash}</span>
         </div>
       `;
 
@@ -1239,16 +1257,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnFhViewFull.classList.toggle('active', mode === 'full');
 
     const shortHash = commit.shortHash || commit.hash.slice(0, 7);
-    fhSelectedCommitInfo.textContent = `${commit.message} (${shortHash}) - by ${commit.author_name} on ${commit.date}`;
+    const initials = getInitials(commit.author_name);
+    const avatarColor = getAvatarColor(commit.author_name);
+    const relTime = formatRelativeTime(commit.date);
 
-    fhDiffContainer.innerHTML = '<div style="padding: 20px; color: var(--text-muted);">Loading content...</div>';
+    fhSelectedCommitInfo.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
+        <div class="avatar-circle" style="background: ${avatarColor};">${initials}</div>
+        <span style="font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(commit.message)}</span>
+        <span style="color: var(--text-muted); font-size: 11px; flex-shrink: 0;">· ${escapeHtml(commit.author_name)} · ${relTime}</span>
+        <span class="commit-hash-pill" style="margin-left: auto;" title="Copy commit hash">${shortHash}</span>
+      </div>
+    `;
+
+    fhDiffContainer.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px;">Loading changes...</div>';
 
     if (mode === 'diff') {
       const diffRes = await window.api.getCommitFileDiff(state.currentRepoPath, commit.hash, state.fileHistoryTarget);
       if (diffRes.success) {
         DiffViewer.render(diffRes.diff, fhDiffContainer);
       } else {
-        fhDiffContainer.innerHTML = `<div class="diff-empty-state"><p style="color: var(--red-hover);">Diff error: ${diffRes.error}</p></div>`;
+        fhDiffContainer.innerHTML = `<div class="diff-empty-state"><p style="color: var(--red-hover);">Diff error: ${escapeHtml(diffRes.error)}</p></div>`;
       }
     } else {
       // Full file content at commit
@@ -1268,7 +1297,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         html += '</div></div>';
         fhDiffContainer.innerHTML = html;
       } else {
-        fhDiffContainer.innerHTML = `<div class="diff-empty-state"><p style="color: var(--red-hover);">Content error: ${contentRes.error}</p></div>`;
+        fhDiffContainer.innerHTML = `<div class="diff-empty-state"><p style="color: var(--red-hover);">Content error: ${escapeHtml(contentRes.error)}</p></div>`;
       }
     }
   }
@@ -1284,6 +1313,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     const filePath = inputFhSearchFile.value.trim();
     if (filePath) loadFileHistory(filePath);
   });
+
+  inputFhSearchFile.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const filePath = inputFhSearchFile.value.trim();
+      if (filePath) loadFileHistory(filePath);
+    }
+  });
+
+  const btnCopyFhPath = document.getElementById('btn-copy-fh-path');
+  if (btnCopyFhPath) {
+    btnCopyFhPath.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (state.fileHistoryTarget) {
+        navigator.clipboard.writeText(state.fileHistoryTarget);
+        showToast(`Copied file path: ${state.fileHistoryTarget}`, 'info');
+      }
+    });
+  }
+
+  const fhTargetPathWrapper = document.getElementById('fh-target-path-wrapper');
+  if (fhTargetPathWrapper) {
+    fhTargetPathWrapper.addEventListener('click', () => {
+      if (state.fileHistoryTarget) {
+        navigator.clipboard.writeText(state.fileHistoryTarget);
+        showToast(`Copied file path: ${state.fileHistoryTarget}`, 'info');
+      }
+    });
+  }
 
   btnFhViewDiff.addEventListener('click', () => {
     if (state.fileHistorySelectedCommit) loadFileRevision(state.fileHistorySelectedCommit, 'diff');
