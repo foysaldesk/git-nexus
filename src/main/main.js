@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
 const path = require('path');
 const gitService = require('./git-service');
 const terminalService = require('./terminal-service');
@@ -6,6 +6,9 @@ const terminalService = require('./terminal-service');
 let mainWindow = null;
 
 function createWindow() {
+  // Disable default menu bar
+  Menu.setApplicationMenu(null);
+
   const iconPath = process.platform === 'win32'
     ? path.join(__dirname, '../../assets/icon.ico')
     : path.join(__dirname, '../../assets/icon.png');
@@ -16,6 +19,7 @@ function createWindow() {
     minWidth: 960,
     minHeight: 600,
     icon: iconPath,
+    autoHideMenuBar: true,
     backgroundColor: '#011c46ff',
     title: 'Git Nexus - Repository Manager',
     frame: true,
@@ -27,6 +31,7 @@ function createWindow() {
     }
   });
 
+  mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 
   // Initialize terminal service with the main window
