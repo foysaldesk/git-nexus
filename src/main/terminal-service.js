@@ -368,7 +368,7 @@ class TerminalService {
   }
 
   setCwd(newCwd) {
-    if (newCwd && newCwd !== this.currentCwd && fs.existsSync(newCwd)) {
+    if (newCwd && fs.existsSync(newCwd)) {
       this.startSession(newCwd);
     }
   }

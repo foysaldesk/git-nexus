@@ -8,7 +8,7 @@ class TerminalManager {
     this.unsubscribe = null;
   }
 
-  init() {
+  init(initialCwd = null) {
     if (this.isInitialized || !this.container) return;
 
     if (typeof Terminal === 'undefined') {
@@ -70,6 +70,9 @@ class TerminalManager {
 
     this.isInitialized = true;
     setTimeout(() => this.fit(), 50);
+
+    // Explicitly start terminal session in main process
+    window.api.startTerminal(initialCwd || undefined);
 
     window.addEventListener('resize', () => this.fit());
   }
