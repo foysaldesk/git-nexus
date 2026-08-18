@@ -902,7 +902,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bodyEl = container.querySelector('.focused-file-body');
 
     if (preloadedDiff) {
-      DiffViewer.render(preloadedDiff, bodyEl);
+      DiffViewer.render(preloadedDiff, bodyEl, file.path);
     } else {
       loadFocusedDiff(file.path, bodyEl);
     }
@@ -923,7 +923,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!state.currentRepoPath || !state.selectedCommit || !filePath) return;
     const res = await window.api.getCommitFileDiff(state.currentRepoPath, state.selectedCommit.hash, filePath);
     if (res.success) {
-      DiffViewer.render(res.diff, targetEl);
+      DiffViewer.render(res.diff, targetEl, filePath);
     } else {
       targetEl.innerHTML = `<div style="padding: 20px; color: var(--red-hover);">Failed to load diff: ${res.error}</div>`;
     }
@@ -995,7 +995,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bodyEl = card.querySelector('.file-diff-card-body');
 
     if (preloadedDiff) {
-      DiffViewer.render(preloadedDiff, bodyEl);
+      DiffViewer.render(preloadedDiff, bodyEl, file.path);
     } else if (isExpanded) {
       loadCardDiff(card, file.path);
     }
@@ -1066,7 +1066,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const diffRes = await window.api.getCommitFileDiff(state.currentRepoPath, state.selectedCommit.hash, filePath);
     if (diffRes.success) {
-      DiffViewer.render(diffRes.diff, bodyEl);
+      DiffViewer.render(diffRes.diff, bodyEl, filePath);
       card.dataset.loaded = 'true';
     } else {
       bodyEl.innerHTML = `<div style="padding: 16px; color: var(--red-hover);">Failed to load diff: ${diffRes.error}</div>`;

@@ -2329,47 +2329,8 @@ main.workspace-content {
 }
 
 /* VS Code Themed Code & Diff Viewer */
-.vscode-editor-wrapper,
-.vscode-diff-wrapper {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  background: var(--vscode-bg);
-  color: var(--vscode-fg);
-  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
-  font-size: 12.5px;
-  line-height: 20px;
-  overflow: auto;
-  user-select: text;
-}
-
-[data-theme="light"] {
-  --vscode-bg: #ffffff;
-  --vscode-fg: #1f2328;
-  --vscode-gutter-bg: #ffffff;
-  --vscode-gutter-num: #6e7781;
-  --vscode-gutter-border: #e1e4e8;
-  --vscode-line-hover: rgba(0, 0, 0, 0.035);
-  --vscode-statusbar-bg: #f6f8fa;
-  --vscode-statusbar-border: #d0d7de;
-  
-  --token-keyword: #0000ff;
-  --token-keyword-control: #af00db;
-  --token-string: #a31515;
-  --token-variable: #001080;
-  --token-comment: #008000;
-  --token-number: #098658;
-  --token-boolean: #0000ff;
-  --token-operator: #000000;
-  --token-function: #795e26;
-  --token-tag: #800000;
-  --token-bracket-1: #0431fa;
-  --token-bracket-2: #319331;
-  --token-bracket-3: #7b3814;
-}
-
-:root, [data-theme="dark"] {
+:root,
+[data-theme="dark"] {
   --vscode-bg: #1e1e1e;
   --vscode-fg: #d4d4d4;
   --vscode-gutter-bg: #1e1e1e;
@@ -2392,6 +2353,60 @@ main.workspace-content {
   --token-bracket-1: #ffd700;
   --token-bracket-2: #da70d6;
   --token-bracket-3: #179fff;
+
+  --diff-header-color: #8b949e;
+}
+
+html[data-theme="light"],
+[data-theme="light"] {
+  --vscode-bg: #ffffff;
+  --vscode-fg: #24292f;
+  --vscode-gutter-bg: #ffffff;
+  --vscode-gutter-num: #6e7781;
+  --vscode-gutter-border: #d0d7de;
+  --vscode-line-hover: rgba(0, 0, 0, 0.04);
+  --vscode-statusbar-bg: #f6f8fa;
+  --vscode-statusbar-border: #d0d7de;
+  
+  --token-keyword: #0000ff;
+  --token-keyword-control: #af00db;
+  --token-string: #0a3069;
+  --token-variable: #0550ae;
+  --token-comment: #57606a;
+  --token-number: #098658;
+  --token-boolean: #0969da;
+  --token-operator: #24292f;
+  --token-function: #6f42c1;
+  --token-tag: #116329;
+  --token-bracket-1: #0550ae;
+  --token-bracket-2: #116329;
+  --token-bracket-3: #8250df;
+
+  --diff-num-bg: #ffffff;
+  --diff-header-bg: #f6f8fa;
+  --diff-header-color: #24292f;
+  --diff-chunk-bg: #ddf4ff;
+  --diff-chunk-color: #0969da;
+  --diff-chunk-border: #54aeff66;
+  --green-diff-bg: #dafbe1;
+  --green-diff-text: #1a7f37;
+  --red-diff-bg: #ffebe9;
+  --red-diff-text: #cf222e;
+}
+
+.vscode-editor-wrapper,
+.vscode-diff-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--vscode-bg);
+  color: var(--vscode-fg);
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  font-size: 12.5px;
+  line-height: 20px;
+  overflow: auto;
+  user-select: text;
 }
 
 .vscode-editor-statusbar {
@@ -2487,7 +2502,7 @@ main.workspace-content {
 /* Syntax Token Highlighting */
 .token-keyword { color: var(--token-keyword); font-weight: 600; }
 .token-keyword-control { color: var(--token-keyword-control); font-weight: 600; }
-.token-string { color: var(--token-string); }
+.token-string { color: var(--token-string); font-weight: 500; }
 .token-variable { color: var(--token-variable); }
 .token-comment { color: var(--token-comment); font-style: italic; }
 .token-number { color: var(--token-number); }
@@ -2501,7 +2516,7 @@ main.workspace-content {
 
 /* Chunk and Header Overrides */
 .diff-chunk-tag {
-  color: var(--accent);
+  color: var(--diff-chunk-color);
   font-weight: 600;
   padding: 1px 5px;
   border-radius: 3px;
@@ -2517,8 +2532,14 @@ main.workspace-content {
 /* VS Code Diff Row Overrides */
 .vscode-code-row.diff-line-header {
   background: var(--diff-header-bg);
-  color: var(--text-secondary);
+  color: var(--diff-header-color);
   font-style: italic;
+  font-size: 11.5px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.vscode-code-row.diff-line-header .vscode-line-content {
+  color: var(--diff-header-color);
 }
 
 .vscode-code-row.diff-line-chunk {
@@ -2528,12 +2549,29 @@ main.workspace-content {
   border-bottom: 1px solid var(--diff-chunk-border);
 }
 
+.vscode-code-row.diff-line-chunk .vscode-line-num {
+  color: var(--diff-chunk-color);
+  font-weight: 600;
+}
+
+.vscode-code-row.diff-line-chunk .diff-prefix {
+  color: var(--diff-chunk-color);
+}
+
 .vscode-code-row.diff-line-normal {
-  background-color: transparent;
+  background-color: var(--vscode-bg);
+}
+
+.vscode-code-row.diff-line-normal .vscode-line-content {
+  color: var(--vscode-fg);
 }
 
 .vscode-code-row.diff-line-add {
   background-color: var(--green-diff-bg);
+}
+
+.vscode-code-row.diff-line-add .vscode-line-content {
+  color: var(--vscode-fg);
 }
 
 .vscode-code-row.diff-line-add .diff-prefix,
@@ -2544,6 +2582,10 @@ main.workspace-content {
 
 .vscode-code-row.diff-line-del {
   background-color: var(--red-diff-bg);
+}
+
+.vscode-code-row.diff-line-del .vscode-line-content {
+  color: var(--vscode-fg);
 }
 
 .vscode-code-row.diff-line-del .diff-prefix,
