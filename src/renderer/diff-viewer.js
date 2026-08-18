@@ -1,4 +1,4 @@
-// VS Code Style Diff & Code Viewer with Full Syntax Highlighting
+// VS Code Style Diff & Code Viewer with Lexical Single-Pass Tokenizer
 class DiffViewer {
   static render(diffText, containerElement, filename = '') {
     if (!containerElement) return;
@@ -30,7 +30,7 @@ class DiffViewer {
       let lineClass = 'diff-line-normal';
       let oldNumDisplay = '';
       let newNumDisplay = '';
-      let prefix = ' ';
+      let prefix = '&nbsp;';
 
       if (line.startsWith('diff --git') || line.startsWith('index ') || line.startsWith('--- ') || line.startsWith('+++ ')) {
         lineClass = 'diff-line-header';
@@ -45,17 +45,21 @@ class DiffViewer {
         continue;
       } else if (line.startsWith('@@')) {
         lineClass = 'diff-line-chunk';
-        const match = line.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+        const match = line.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)$/);
+        let chunkContext = '';
         if (match) {
           oldLineNum = parseInt(match[1], 10);
           newLineNum = parseInt(match[2], 10);
+          if (match[3]) {
+            chunkContext = match[3];
+          }
         }
         html += `
           <div class="vscode-code-row ${lineClass}">
             <div class="vscode-line-num vscode-num-old">...</div>
             <div class="vscode-line-num vscode-num-new">...</div>
-            <div class="diff-prefix">&nbsp;</div>
-            <div class="vscode-line-content">${this.escapeHtml(line)}</div>
+            <div class="diff-prefix">@@</div>
+            <div class="vscode-line-content"><span class="diff-chunk-tag">${this.escapeHtml(line.split('@@')[1] ? `@@${line.split('@@')[1]}@@` : line)}</span> <span class="diff-chunk-context">${this.escapeHtml(chunkContext)}</span></div>
           </div>
         `;
         continue;
@@ -71,7 +75,7 @@ class DiffViewer {
         lineClass = 'diff-line-normal';
         oldNumDisplay = oldLineNum++;
         newLineNum++;
-        prefix = ' ';
+        prefix = '&nbsp;';
       }
 
       const rawContent = line.length > 0 ? line.substring(1) : '';
@@ -114,7 +118,7 @@ class DiffViewer {
           </div>
           <div class="vscode-status-right">
             <span class="vscode-badge-lang">${lang.toUpperCase()}</span>
-            <span class="vscode-status-lines">${lines.length} lines</span>
+            <span class="vscode-status-lines">${lines.length.toLocaleString()} lines</span>
           </div>
         </div>
         <div class="vscode-code-table">
@@ -124,7 +128,7 @@ class DiffViewer {
       const lineNum = idx + 1;
       const highlighted = this.highlightSyntax(line, filename);
       html += `
-        <div class="vscode-code-row">
+        <div class="vscode-code-row diff-line-normal">
           <div class="vscode-line-num">${lineNum}</div>
           <div class="vscode-line-content">${highlighted}</div>
         </div>
@@ -152,104 +156,101 @@ class DiffViewer {
     return 'code';
   }
 
+  // Pure lexical single-pass tokenizer — never generates placeholder corruptions
   static highlightSyntax(rawLine, filename = '') {
     if (!rawLine) return '&nbsp;';
 
-    // Preserve leading indent spaces as &nbsp;
-    let indentCount = 0;
-    while (indentCount < rawLine.length && rawLine[indentCount] === ' ') {
-      indentCount++;
-    }
-    const indentHtml = '&nbsp;'.repeat(indentCount);
-    const textToHighlight = rawLine.substring(indentCount);
-    if (!textToHighlight) return indentHtml || '&nbsp;';
+    // Master tokenizer regex matching tokens in strict priority order
+    const tokenizerRegex = /(<\?(?:php|=)?|\?>)|(\/\/[^\r\n]*|\/\*[\s\S]*?\*\/|#[^\r\n]*)|('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`)|(\$[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)|(=>|->|::|\?\?|\?:|===|!==|==|!=|<=|>=|\+=|-=|\*=|\/=|&&|\|\||\+\+|--)|([a-zA-Z_][a-zA-Z0-9_]*)(?=\s*\()|(\b\d+(?:\.\d+)?\b|\b0x[0-9a-fA-F]+\b)|([a-zA-Z_][a-zA-Z0-9_]*)|([\[\]])|([{}])|([()])|(\s+)|([^\s\w])/g;
 
-    let s = textToHighlight;
+    const controlKeywords = new Set([
+      'return', 'if', 'else', 'elseif', 'foreach', 'for', 'while', 'do',
+      'switch', 'case', 'break', 'continue', 'default', 'try', 'catch',
+      'finally', 'throw', 'yield', 'match'
+    ]);
 
-    // Tokens collection to avoid regex overlap collisions
-    const tokens = [];
-    const saveToken = (html) => {
-      const id = `___TOK_${tokens.length}___`;
-      tokens.push(html);
-      return id;
-    };
+    const generalKeywords = new Set([
+      'function', 'fn', 'class', 'interface', 'trait', 'extends', 'implements',
+      'public', 'private', 'protected', 'static', 'abstract', 'final', 'const',
+      'let', 'var', 'new', 'use', 'namespace', 'import', 'export', 'from',
+      'as', 'async', 'await', 'typeof', 'instanceof', 'echo', 'print', 'die',
+      'exit', 'include', 'require', 'include_once', 'require_once', 'declare',
+      'global', 'void', 'string', 'int', 'bool', 'array', 'object', 'mixed', 'self', 'parent'
+    ]);
 
-    // 1. Comments: // ... or /* ... */ or # ...
-    s = s.replace(/(\/\/.*$|\/\*[\s\S]*?\*\/|#.*$)/g, (match) => {
-      return saveToken(`<span class="token-comment">${this.escapeText(match)}</span>`);
-    });
+    const booleansAndNull = new Set([
+      'true', 'false', 'null', 'undefined', 'NaN', 'TRUE', 'FALSE', 'NULL'
+    ]);
 
-    // 2. PHP Open / Close Tags
-    s = s.replace(/(&lt;\?php|\?&gt;|<\?php|\?>|<\?=)/gi, (match) => {
-      return saveToken(`<span class="token-tag">${this.escapeText(match)}</span>`);
-    });
+    let out = '';
+    let match;
 
-    // 3. Strings: single-quote, double-quote, backtick
-    s = s.replace(/('([^'\\]|\\.)*'|"([^"\\]|\\.)*"|`([^`\\]|\\.)*`)/g, (match) => {
-      // Check if it's an associative array key or property: e.g. 'key' => or "key":
-      return saveToken(`<span class="token-string">${this.escapeText(match)}</span>`);
-    });
+    while ((match = tokenizerRegex.exec(rawLine)) !== null) {
+      const [
+        full,
+        tag,
+        comment,
+        str,
+        variable,
+        operator,
+        fnCall,
+        number,
+        word,
+        squareBracket,
+        curlyBracket,
+        roundBracket,
+        whitespace,
+        other
+      ] = match;
 
-    // 4. Variables ($this, $request, $var, etc.)
-    s = s.replace(/(\$[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)/g, (match) => {
-      if (match === '$this') {
-        return saveToken(`<span class="token-keyword-control">${match}</span>`);
+      if (tag) {
+        out += `<span class="token-tag">${this.escapeText(tag)}</span>`;
+      } else if (comment) {
+        out += `<span class="token-comment">${this.escapeText(comment)}</span>`;
+      } else if (str) {
+        out += `<span class="token-string">${this.escapeText(str)}</span>`;
+      } else if (variable) {
+        if (variable === '$this') {
+          out += `<span class="token-keyword-control">${variable}</span>`;
+        } else {
+          out += `<span class="token-variable">${variable}</span>`;
+        }
+      } else if (operator) {
+        out += `<span class="token-operator">${this.escapeText(operator)}</span>`;
+      } else if (fnCall) {
+        if (controlKeywords.has(fnCall)) {
+          out += `<span class="token-keyword-control">${fnCall}</span>`;
+        } else if (generalKeywords.has(fnCall)) {
+          out += `<span class="token-keyword">${fnCall}</span>`;
+        } else {
+          out += `<span class="token-function">${fnCall}</span>`;
+        }
+      } else if (number) {
+        out += `<span class="token-number">${number}</span>`;
+      } else if (word) {
+        if (controlKeywords.has(word)) {
+          out += `<span class="token-keyword-control">${word}</span>`;
+        } else if (generalKeywords.has(word)) {
+          out += `<span class="token-keyword">${word}</span>`;
+        } else if (booleansAndNull.has(word)) {
+          out += `<span class="token-boolean">${word}</span>`;
+        } else {
+          out += this.escapeText(word);
+        }
+      } else if (squareBracket) {
+        out += `<span class="token-bracket-square">${squareBracket}</span>`;
+      } else if (curlyBracket) {
+        out += `<span class="token-bracket-curly">${curlyBracket}</span>`;
+      } else if (roundBracket) {
+        out += `<span class="token-bracket-round">${roundBracket}</span>`;
+      } else if (whitespace) {
+        out += whitespace.replace(/ /g, '&nbsp;').replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
+      } else if (other) {
+        out += this.escapeText(other);
       }
-      return saveToken(`<span class="token-variable">${match}</span>`);
-    });
-
-    // 5. Control Keywords (return, if, else, try, catch, foreach, etc.)
-    const controlKeywords = /\b(return|if|else|elseif|foreach|for|while|do|switch|case|break|continue|default|try|catch|finally|throw|yield|match)\b/g;
-    s = s.replace(controlKeywords, (match) => {
-      return saveToken(`<span class="token-keyword-control">${match}</span>`);
-    });
-
-    // 6. Language Keywords (function, class, public, private, const, let, var, etc.)
-    const langKeywords = /\b(function|fn|class|interface|trait|extends|implements|public|private|protected|static|abstract|final|const|let|var|new|use|namespace|import|export|from|as|async|await|typeof|instanceof|echo|print|die|exit|include|require|include_once|require_once|declare|global)\b/g;
-    s = s.replace(langKeywords, (match) => {
-      return saveToken(`<span class="token-keyword">${match}</span>`);
-    });
-
-    // 7. Booleans, Null, and Constants
-    s = s.replace(/\b(true|false|null|undefined|NaN|TRUE|FALSE|NULL)\b/g, (match) => {
-      return saveToken(`<span class="token-boolean">${match}</span>`);
-    });
-
-    // 8. Numbers (integers, floats, hex)
-    s = s.replace(/\b(0x[0-9a-fA-F]+|\d+(\.\d+)?)\b/g, (match) => {
-      return saveToken(`<span class="token-number">${match}</span>`);
-    });
-
-    // 9. Arrow Operators and Methods: =>, ->, ::, ??
-    s = s.replace(/(=>|->|::|\?\?|\?:)/g, (match) => {
-      return saveToken(`<span class="token-operator">${this.escapeText(match)}</span>`);
-    });
-
-    // 10. Functions / Methods calls: name(
-    s = s.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)(?=\s*\()/g, (match) => {
-      return saveToken(`<span class="token-function">${match}</span>`);
-    });
-
-    // 11. Array Brackets / Braces / Parentheses
-    s = s.replace(/([\[\]])/g, (match) => {
-      return saveToken(`<span class="token-bracket-square">${match}</span>`);
-    });
-    s = s.replace(/([{}])/g, (match) => {
-      return saveToken(`<span class="token-bracket-curly">${match}</span>`);
-    });
-    s = s.replace(/([()])/g, (match) => {
-      return saveToken(`<span class="token-bracket-round">${match}</span>`);
-    });
-
-    // Escape any remaining plain text characters
-    s = this.escapeText(s);
-
-    // Restore tokens
-    for (let i = 0; i < tokens.length; i++) {
-      s = s.replace(`___TOK_${i}___`, tokens[i]);
     }
 
-    return indentHtml + s;
+    return out || '&nbsp;';
   }
 
   static escapeText(str) {

@@ -2335,8 +2335,8 @@ main.workspace-content {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background: var(--vscode-bg, #1e1e1e);
-  color: var(--vscode-fg, #d4d4d4);
+  background: var(--vscode-bg);
+  color: var(--vscode-fg);
   font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
   font-size: 12.5px;
   line-height: 20px;
@@ -2348,11 +2348,11 @@ main.workspace-content {
   --vscode-bg: #ffffff;
   --vscode-fg: #1f2328;
   --vscode-gutter-bg: #ffffff;
-  --vscode-gutter-num: #6e7681;
+  --vscode-gutter-num: #6e7781;
   --vscode-gutter-border: #e1e4e8;
-  --vscode-line-hover: rgba(0, 0, 0, 0.04);
-  --vscode-statusbar-bg: #f3f3f3;
-  --vscode-statusbar-border: #e1e4e8;
+  --vscode-line-hover: rgba(0, 0, 0, 0.035);
+  --vscode-statusbar-bg: #f6f8fa;
+  --vscode-statusbar-border: #d0d7de;
   
   --token-keyword: #0000ff;
   --token-keyword-control: #af00db;
@@ -2369,32 +2369,7 @@ main.workspace-content {
   --token-bracket-3: #7b3814;
 }
 
-[data-theme="dark"] {
-  --vscode-bg: #1e1e1e;
-  --vscode-fg: #d4d4d4;
-  --vscode-gutter-bg: #1e1e1e;
-  --vscode-gutter-num: #858585;
-  --vscode-gutter-border: #2d2d2d;
-  --vscode-line-hover: rgba(255, 255, 255, 0.05);
-  --vscode-statusbar-bg: #252526;
-  --vscode-statusbar-border: #333333;
-  
-  --token-keyword: #569cd6;
-  --token-keyword-control: #c586c0;
-  --token-string: #ce9178;
-  --token-variable: #9cdcfe;
-  --token-comment: #6a9955;
-  --token-number: #b5cea8;
-  --token-boolean: #569cd6;
-  --token-operator: #d4d4d4;
-  --token-function: #dcdcaa;
-  --token-tag: #569cd6;
-  --token-bracket-1: #ffd700;
-  --token-bracket-2: #da70d6;
-  --token-bracket-3: #179fff;
-}
-
-:root {
+:root, [data-theme="dark"] {
   --vscode-bg: #1e1e1e;
   --vscode-fg: #d4d4d4;
   --vscode-gutter-bg: #1e1e1e;
@@ -2491,6 +2466,16 @@ main.workspace-content {
   flex-shrink: 0;
 }
 
+.diff-prefix {
+  width: 22px;
+  min-width: 22px;
+  text-align: center;
+  user-select: none;
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
 .vscode-line-content {
   padding: 0 12px 0 6px;
   white-space: pre;
@@ -2514,6 +2499,21 @@ main.workspace-content {
 .token-bracket-square { color: var(--token-bracket-2); }
 .token-bracket-curly { color: var(--token-bracket-3); }
 
+/* Chunk and Header Overrides */
+.diff-chunk-tag {
+  color: var(--accent);
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(47, 129, 247, 0.12);
+  margin-right: 6px;
+}
+
+.diff-chunk-context {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* VS Code Diff Row Overrides */
 .vscode-code-row.diff-line-header {
   background: var(--diff-header-bg);
@@ -2528,8 +2528,12 @@ main.workspace-content {
   border-bottom: 1px solid var(--diff-chunk-border);
 }
 
+.vscode-code-row.diff-line-normal {
+  background-color: transparent;
+}
+
 .vscode-code-row.diff-line-add {
-  background: var(--green-diff-bg);
+  background-color: var(--green-diff-bg);
 }
 
 .vscode-code-row.diff-line-add .diff-prefix,
@@ -2539,7 +2543,7 @@ main.workspace-content {
 }
 
 .vscode-code-row.diff-line-del {
-  background: var(--red-diff-bg);
+  background-color: var(--red-diff-bg);
 }
 
 .vscode-code-row.diff-line-del .diff-prefix,
