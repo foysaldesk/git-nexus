@@ -1,0 +1,28 @@
+{
+  "name": "git-nexus-desktop",
+  "version": "1.0.0",
+  "description": "Modern Graphical Git Repository Manager and Terminal built with Electron",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "test": "node test-git-service.js"
+  },
+  "keywords": [
+    "git",
+    "electron",
+    "git-gui",
+    "git-manager",
+    "terminal"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "dependencies": {
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
+    "simple-git": "^3.27.0"
+  },
+  "devDependencies": {
+    "electron": "^34.2.0"
+  }
+}
