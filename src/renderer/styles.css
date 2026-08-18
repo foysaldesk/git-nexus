@@ -1771,10 +1771,17 @@ main.workspace-content {
   display: flex;
   align-items: center;
   gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  max-width: calc(100vw - 420px);
+}
+
+.terminal-quick-cmds::-webkit-scrollbar {
+  display: none;
 }
 
 .cmd-chip {
-  padding: 3px 10px;
+  padding: 3px 9px;
   font-size: 11px;
   font-family: 'Ubuntu Mono', Consolas, monospace;
   background: #24061a;
@@ -1782,6 +1789,8 @@ main.workspace-content {
   border-radius: 6px;
   color: #dfdbd2;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.15s ease;
 }
 
@@ -1790,6 +1799,7 @@ main.workspace-content {
   color: #ffffff;
   border-color: #e95420;
   box-shadow: 0 0 8px rgba(233, 84, 32, 0.35);
+  transform: translateY(-1px);
 }
 
 .ubuntu-action-btn {

@@ -47,5 +47,10 @@ contextBridge.exposeInMainWorld('api', {
     const handler = (_, data) => callback(data);
     ipcRenderer.on('terminal:data', handler);
     return () => ipcRenderer.removeListener('terminal:data', handler);
+  },
+  onTerminalSuggestions: (callback) => {
+    const handler = (_, suggestions) => callback(suggestions);
+    ipcRenderer.on('terminal:suggestions', handler);
+    return () => ipcRenderer.removeListener('terminal:suggestions', handler);
   }
 });

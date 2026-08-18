@@ -436,11 +436,16 @@
           </div>
         </div>
 
-        <div class="terminal-quick-cmds">
-          <button class="cmd-chip ubuntu-chip" data-cmd="git status">git status</button>
-          <button class="cmd-chip ubuntu-chip" data-cmd="git log --oneline -n 5">git log</button>
-          <button class="cmd-chip ubuntu-chip" data-cmd="git branch -a">git branch -a</button>
-          <button class="cmd-chip ubuntu-chip" data-cmd="git remote -v">git remote -v</button>
+        <div id="terminal-suggestions-bar" class="terminal-quick-cmds">
+          <button class="cmd-chip ubuntu-chip" data-cmd="git status" title="Show working tree status">git status</button>
+          <button class="cmd-chip ubuntu-chip" data-cmd="git log --oneline -n 10" title="Compact commit history">git log</button>
+          <button class="cmd-chip ubuntu-chip" data-cmd="git branch -a" title="List all branches">git branch -a</button>
+          <button class="cmd-chip ubuntu-chip" data-cmd="git diff" title="Show working changes">git diff</button>
+          <button class="cmd-chip ubuntu-chip" data-cmd="git add ." title="Stage all changes">git add .</button>
+          <button class="cmd-chip ubuntu-chip" data-cmd="git commit -m &quot;&quot;" title="Commit staged changes">git commit</button>
+          <button class="cmd-chip ubuntu-chip" data-cmd="git push origin" title="Push to remote">git push</button>
+          <button class="cmd-chip ubuntu-chip" data-cmd="git pull origin" title="Pull from remote">git pull</button>
+          <button class="cmd-chip ubuntu-chip" data-cmd="git stash" title="Save uncommitted changes">git stash</button>
         </div>
 
         <div class="terminal-header-actions" style="display: flex; gap: 10px; align-items: center;">

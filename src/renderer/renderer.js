@@ -2078,6 +2078,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Real-time Git Command Suggestions Stream
+  const terminalSuggestionsBar = document.getElementById('terminal-suggestions-bar');
+  if (window.api.onTerminalSuggestions && terminalSuggestionsBar) {
+    window.api.onTerminalSuggestions((suggestions) => {
+      if (!Array.isArray(suggestions) || suggestions.length === 0) return;
+      terminalSuggestionsBar.innerHTML = '';
+      suggestions.forEach(item => {
+        const chip = document.createElement('button');
+        chip.className = 'cmd-chip ubuntu-chip';
+        chip.setAttribute('data-cmd', item.cmd);
+        chip.title = item.desc || item.cmd;
+        chip.textContent = item.label || item.cmd;
+        chip.addEventListener('click', () => {
+          if (terminalDrawer.classList.contains('collapsed')) {
+            terminalDrawer.classList.remove('collapsed');
+          }
+          termManager.fit();
+          termManager.focus();
+          setTimeout(() => {
+            termManager.fit();
+            termManager.sendQuickCommand(item.cmd);
+            termManager.focus();
+          }, 80);
+        });
+        terminalSuggestionsBar.appendChild(chip);
+      });
+    });
+  }
+
   document.querySelectorAll('.cmd-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       const cmd = chip.getAttribute('data-cmd');
