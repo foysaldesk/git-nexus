@@ -264,7 +264,18 @@ class TerminalService {
     if (data === '\r' || data === '\n' || data === '\r\n' || data.endsWith('\r') || data.endsWith('\n')) {
       const incomingCmd = data.replace(/[\r\n]+$/, '');
       if (incomingCmd) {
-        this.currentLine += incomingCmd;
+        // If a full command was sent by clicking a suggestion chip,
+        // clear whatever partial line was currently typed on screen and in buffer
+        if (this.currentLine) {
+          let clearStr = '';
+          if (this.cursorPos > 0) {
+            clearStr += `\x1b[${this.cursorPos}D`;
+          }
+          clearStr += '\x1b[K';
+          this.emitData(clearStr);
+        }
+        this.currentLine = incomingCmd;
+        this.cursorPos = incomingCmd.length;
         this.emitData(incomingCmd);
       }
 
