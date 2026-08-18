@@ -418,7 +418,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     activeRepoPill.title = repoPath;
 
     // Update Terminal CWD
-    terminalCwdLabel.textContent = `Terminal - ${folderName}`;
+    const cleanRepoPath = repoPath.replace(/\\/g, '/');
+    terminalCwdLabel.textContent = `ubuntu: ~/${folderName}`;
     await window.api.setTerminalCwd(repoPath);
 
     // Populate Datalist for File Search
@@ -2013,6 +2014,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   btnToggleTerminal.addEventListener('click', toggleTerminal);
   btnTerminalClose.addEventListener('click', () => terminalDrawer.classList.add('collapsed'));
+  const btnTerminalMin = document.getElementById('btn-terminal-minimize');
+  if (btnTerminalMin) {
+    btnTerminalMin.addEventListener('click', () => terminalDrawer.classList.add('collapsed'));
+  }
 
   btnTerminalSize.addEventListener('click', () => {
     terminalDrawer.classList.toggle('maximized');

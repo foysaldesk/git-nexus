@@ -38,8 +38,31 @@ class TerminalService {
     }
   }
 
-  getPrompt() {
-    return `\r\n${this.currentCwd}>`;
+  getCleanPath() {
+    let cleanPath = this.currentCwd.replace(/\\/g, '/');
+    try {
+      const userHome = os.homedir().replace(/\\/g, '/');
+      if (cleanPath.toLowerCase().startsWith(userHome.toLowerCase())) {
+        cleanPath = '~' + cleanPath.slice(userHome.length);
+      }
+    } catch (e) { /* ignore */ }
+    return cleanPath;
+  }
+
+  getUsername() {
+    try {
+      const name = (os.userInfo ? (os.userInfo().username || 'user') : 'user');
+      return name.toLowerCase().replace(/\s+/g, '_');
+    } catch (e) {
+      return 'user';
+    }
+  }
+
+  getPrompt(withLeadingNewline = true) {
+    const user = this.getUsername();
+    const cleanPath = this.getCleanPath();
+    const prefix = withLeadingNewline ? '\r\n' : '';
+    return `${prefix}\x1b[1;32m${user}@ubuntu\x1b[0m:\x1b[1;34m${cleanPath}\x1b[0m$ `;
   }
 
   startSession(cwd = process.cwd()) {
@@ -49,10 +72,13 @@ class TerminalService {
     this.cursorPos = 0;
     this.historyIndex = this.history.length;
 
-    // Send banner and initial prompt
-    this.emitData(`\x1b[1;36mGit Nexus Terminal\x1b[0m [Interactive Shell]\r\n`);
-    this.emitData(`Type commands or use quick action buttons above.\r\n`);
-    this.emitData(`${this.currentCwd}>`);
+    const user = this.getUsername();
+    const cleanPath = this.getCleanPath();
+
+    // Send Ubuntu banner and styled prompt
+    this.emitData(`\x1b[1;33mWelcome to Ubuntu 24.04 LTS (Git Nexus Shell)\x1b[0m\r\n`);
+    this.emitData(` * Repository: \x1b[36m${cleanPath}\x1b[0m\r\n\r\n`);
+    this.emitData(`\x1b[1;32m${user}@ubuntu\x1b[0m:\x1b[1;34m${cleanPath}\x1b[0m$ `);
 
     return { success: true, cwd: this.currentCwd };
   }
@@ -105,7 +131,7 @@ class TerminalService {
         this.historyIndex = this.history.length;
         this.executeCommand(command);
       } else {
-        this.emitData(`${this.currentCwd}>`);
+        this.emitData(this.getPrompt(false));
       }
 
       this.currentLine = '';
@@ -152,13 +178,13 @@ class TerminalService {
       this.currentLine = '';
       this.cursorPos = 0;
       this.historyIndex = this.history.length;
-      this.emitData(`^C\r\n${this.currentCwd}>`);
+      this.emitData('^C' + this.getPrompt(true));
       return;
     }
 
     // 5. Ctrl+L (\x0c) -> Clear screen
     if (data === '\x0c') {
-      this.emitData(`\x1b[2J\x1b[H${this.currentCwd}>${this.currentLine}`);
+      this.emitData(`\x1b[2J\x1b[H${this.getPrompt(false)}${this.currentLine}`);
       return;
     }
 
@@ -305,7 +331,7 @@ class TerminalService {
       let target = trimmed.slice(2).trim();
       if (!target) {
         // print current directory
-        this.emitData(`${this.currentCwd}\r\n${this.currentCwd}>`);
+        this.emitData(`${this.currentCwd}\r\n${this.getPrompt(false)}`);
         return;
       }
 
@@ -316,10 +342,10 @@ class TerminalService {
       if (fs.existsSync(newPath) && fs.statSync(newPath).isDirectory()) {
         this.currentCwd = newPath;
       } else {
-        this.emitData(`The system cannot find the path specified: ${target}\r\n`);
+        this.emitData(`bash: cd: ${target}: No such file or directory\r\n`);
       }
 
-      this.emitData(`${this.currentCwd}>`);
+      this.emitData(this.getPrompt(false));
       return;
     }
 
@@ -329,19 +355,19 @@ class TerminalService {
       if (fs.existsSync(drive)) {
         this.currentCwd = drive;
       }
-      this.emitData(`${this.currentCwd}>`);
+      this.emitData(this.getPrompt(false));
       return;
     }
 
     // 3. Built-in: cls / clear
     if (trimmed.toLowerCase() === 'cls' || trimmed.toLowerCase() === 'clear') {
-      this.emitData(`\x1b[2J\x1b[H${this.currentCwd}>`);
+      this.emitData(`\x1b[2J\x1b[H${this.getPrompt(false)}`);
       return;
     }
 
     // 4. Built-in: exit
     if (trimmed.toLowerCase() === 'exit') {
-      this.emitData(`Session reset.\r\n${this.currentCwd}>`);
+      this.emitData(`Session reset.\r\n${this.getPrompt(false)}`);
       return;
     }
 
@@ -370,16 +396,16 @@ class TerminalService {
 
       this.activeChild.on('close', (code) => {
         this.activeChild = null;
-        this.emitData(`${this.getPrompt()}`);
+        this.emitData(this.getPrompt(true));
       });
 
       this.activeChild.on('error', (err) => {
         this.activeChild = null;
-        this.emitData(`\r\nError executing command: ${err.message}\r\n${this.getPrompt()}`);
+        this.emitData(`\r\nError executing command: ${err.message}\r\n${this.getPrompt(true)}`);
       });
     } catch (err) {
       this.activeChild = null;
-      this.emitData(`\r\nExecution error: ${err.message}\r\n${this.getPrompt()}`);
+      this.emitData(`\r\nExecution error: ${err.message}\r\n${this.getPrompt(true)}`);
     }
   }
 

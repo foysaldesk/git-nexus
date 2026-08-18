@@ -1640,22 +1640,26 @@ main.workspace-content {
   background-color: var(--bg-main);
 }
 
-/* Collapsible Bottom Terminal Drawer */
+/* ==========================================================================
+   Ubuntu Terminal Aesthetic Theme
+   ========================================================================== */
 .terminal-drawer {
-  height: 250px;
-  background: var(--bg-main);
-  border-top: 2px solid var(--border-color);
+  height: 270px;
+  background: #300a24;
+  border-top: 2px solid #5e2750;
   display: flex;
   flex-direction: column;
   transition: height 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   z-index: 5;
+  box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.35);
 }
 
 .terminal-drawer.collapsed {
   height: 0;
   border-top: none;
   overflow: hidden;
+  box-shadow: none;
 }
 
 .terminal-drawer.maximized {
@@ -1663,9 +1667,9 @@ main.workspace-content {
 }
 
 .terminal-header {
-  height: 36px;
-  background: var(--bg-sidebar);
-  border-bottom: 1px solid var(--border-color);
+  height: 38px;
+  background: #24061a;
+  border-bottom: 1px solid #451034;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1673,13 +1677,68 @@ main.workspace-content {
   flex-shrink: 0;
 }
 
-.terminal-title {
+.terminal-header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  gap: 12px;
+  min-width: 0;
+}
+
+.ubuntu-window-controls {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.ubuntu-btn {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.ubuntu-btn:hover {
+  opacity: 0.85;
+  transform: scale(1.15);
+}
+
+.ubuntu-btn-close {
+  background: #e95420; /* Ubuntu Orange */
+}
+
+.ubuntu-btn-min {
+  background: #5e2750; /* Ubuntu Plum */
+}
+
+.ubuntu-btn-max {
+  background: #77216f; /* Ubuntu Magenta */
+}
+
+.terminal-tab-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #300a24;
+  border: 1px solid #451034;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 500;
+  font-family: 'Ubuntu Mono', Consolas, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 280px;
+}
+
+.terminal-tab-pill svg {
+  color: #e95420;
+  flex-shrink: 0;
 }
 
 .terminal-quick-cmds {
@@ -1689,28 +1748,50 @@ main.workspace-content {
 }
 
 .cmd-chip {
-  padding: 2px 8px;
+  padding: 3px 10px;
   font-size: 11px;
-  font-family: var(--font-mono);
-  background: var(--bg-panel);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
+  font-family: 'Ubuntu Mono', Consolas, monospace;
+  background: #24061a;
+  border: 1px solid #451034;
+  border-radius: 6px;
+  color: #dfdbd2;
   cursor: pointer;
-  transition: all 0.1s ease;
+  transition: all 0.15s ease;
 }
 
 .cmd-chip:hover {
-  background: var(--bg-card-hover);
-  color: var(--text-primary);
-  border-color: var(--accent);
+  background: #380c2a;
+  color: #ffffff;
+  border-color: #e95420;
+  box-shadow: 0 0 8px rgba(233, 84, 32, 0.35);
+}
+
+.ubuntu-action-btn {
+  color: #dfdbd2 !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 6px;
+}
+
+.ubuntu-action-btn:hover {
+  background: #380c2a !important;
+  color: #ffffff !important;
+  border-color: #451034 !important;
 }
 
 .terminal-container {
   flex: 1;
-  padding: 6px;
-  background-color: var(--bg-main);
+  padding: 6px 10px;
+  background-color: #300a24;
   overflow: hidden;
+}
+
+.terminal-container .xterm {
+  padding: 2px;
+}
+
+.terminal-container .xterm-viewport {
+  background-color: #300a24 !important;
 }
 
 /* ==========================================================================

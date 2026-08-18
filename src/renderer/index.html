@@ -420,48 +420,41 @@
       </main>
     </div>
 
-    <!-- Bottom Collapsible Terminal Drawer -->
-    <div id="terminal-drawer" class="terminal-drawer collapsed">
-      <div class="terminal-header">
-        <div class="terminal-title">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="4 17 10 11 4 5"></polyline>
-            <line x1="12" y1="19" x2="20" y2="19"></line>
-          </svg>
-          <span id="terminal-cwd-label">Terminal</span>
+    <!-- Bottom Collapsible Terminal Drawer (Ubuntu Terminal Theme) -->
+    <div id="terminal-drawer" class="terminal-drawer collapsed ubuntu-terminal">
+      <div class="terminal-header ubuntu-header">
+        <div class="terminal-header-left">
+          <div class="ubuntu-window-controls">
+            <button class="ubuntu-btn ubuntu-btn-close" id="btn-terminal-close" title="Close Terminal"></button>
+            <button class="ubuntu-btn ubuntu-btn-min" id="btn-terminal-minimize" title="Minimize Terminal"></button>
+            <button class="ubuntu-btn ubuntu-btn-max" id="btn-terminal-size" title="Maximize/Restore Terminal"></button>
+          </div>
+          <div class="terminal-tab-pill">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+            <span id="terminal-cwd-label">user@ubuntu: ~</span>
+          </div>
         </div>
 
         <div class="terminal-quick-cmds">
-          <button class="cmd-chip" data-cmd="git status">git status</button>
-          <button class="cmd-chip" data-cmd="git log --oneline -n 5">git log</button>
-          <button class="cmd-chip" data-cmd="git branch -a">git branch -a</button>
-          <button class="cmd-chip" data-cmd="git remote -v">git remote -v</button>
+          <button class="cmd-chip ubuntu-chip" data-cmd="git status">git status</button>
+          <button class="cmd-chip ubuntu-chip" data-cmd="git log --oneline -n 5">git log</button>
+          <button class="cmd-chip ubuntu-chip" data-cmd="git branch -a">git branch -a</button>
+          <button class="cmd-chip ubuntu-chip" data-cmd="git remote -v">git remote -v</button>
         </div>
 
-        <div style="display: flex; gap: 6px; align-items: center;">
-          <button id="btn-terminal-clear" class="btn btn-icon" title="Clear Terminal" style="padding: 2px 6px;">
+        <div class="terminal-header-actions" style="display: flex; gap: 6px; align-items: center;">
+          <button id="btn-terminal-clear" class="btn btn-icon ubuntu-action-btn" title="Clear Terminal (Ctrl+L)" style="padding: 2px 6px;">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
             </svg>
           </button>
-          <button id="btn-terminal-size" class="btn btn-icon" title="Maximize/Restore" style="padding: 2px 6px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="15 3 21 3 21 9"></polyline>
-              <polyline points="9 21 3 21 3 15"></polyline>
-              <line x1="21" y1="3" x2="14" y2="10"></line>
-              <line x1="3" y1="21" x2="10" y2="14"></line>
-            </svg>
-          </button>
-          <button id="btn-terminal-close" class="btn btn-icon" title="Close Terminal" style="padding: 2px 6px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
         </div>
       </div>
-      <div id="terminal-container" class="terminal-container"></div>
+      <div id="terminal-container" class="terminal-container ubuntu-container"></div>
     </div>
 
     <!-- Modals -->

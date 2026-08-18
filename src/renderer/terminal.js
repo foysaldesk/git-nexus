@@ -18,31 +18,33 @@ class TerminalManager {
 
     this.terminal = new Terminal({
       cursorBlink: true,
-      fontFamily: 'Consolas, "Fira Code", monospace, "Segoe UI"',
-      fontSize: 13,
-      lineHeight: 1.2,
+      cursorStyle: 'block',
+      fontFamily: '"Ubuntu Mono", "DejaVu Sans Mono", Consolas, "Fira Code", monospace',
+      fontSize: 13.5,
+      lineHeight: 1.25,
       theme: {
-        background: '#0d1117',
-        foreground: '#c9d1d9',
-        cursor: '#58a6ff',
-        cursorAccent: '#0d1117',
-        selectionBackground: '#264f78',
-        black: '#484f58',
-        red: '#ff7b72',
-        green: '#3fb950',
-        yellow: '#d29922',
-        blue: '#58a6ff',
-        magenta: '#bc8cff',
-        cyan: '#39c5cf',
-        white: '#b1bac4',
-        brightBlack: '#6e7681',
-        brightRed: '#ffa198',
-        brightGreen: '#56d364',
-        brightYellow: '#e3b341',
-        brightBlue: '#79c0ff',
-        brightMagenta: '#d2a8ff',
-        brightCyan: '#56d4dd',
-        brightWhite: '#f0f6fc'
+        background: '#300a24',
+        foreground: '#ffffff',
+        cursor: '#ffffff',
+        cursorAccent: '#300a24',
+        selectionBackground: 'rgba(233, 84, 32, 0.5)',
+        selectionForeground: '#ffffff',
+        black: '#2e3436',
+        red: '#cc0000',
+        green: '#4e9a06',
+        yellow: '#c4a000',
+        blue: '#3465a4',
+        magenta: '#75507b',
+        cyan: '#06989a',
+        white: '#d3d7cf',
+        brightBlack: '#555753',
+        brightRed: '#ef2929',
+        brightGreen: '#8ae234',
+        brightYellow: '#fce94f',
+        brightBlue: '#729fcf',
+        brightMagenta: '#ad7fa8',
+        brightCyan: '#34e2e2',
+        brightWhite: '#eeeeec'
       }
     });
 
@@ -100,55 +102,32 @@ class TerminalManager {
   }
 
   setTheme(themeName) {
+    // Keep iconic Ubuntu Aubergine styling for all modes
     if (!this.terminal) return;
-    const isLight = themeName === 'light';
-    this.terminal.options.theme = isLight
-      ? {
-          background: '#ffffff',
-          foreground: '#24292f',
-          cursor: '#0969da',
-          cursorAccent: '#ffffff',
-          selectionBackground: '#b6d7fe',
-          black: '#24292f',
-          red: '#cf222e',
-          green: '#116329',
-          yellow: '#4d2d00',
-          blue: '#0969da',
-          magenta: '#8250df',
-          cyan: '#1b7c83',
-          white: '#6e7781',
-          brightBlack: '#57606a',
-          brightRed: '#a40e26',
-          brightGreen: '#1a7f37',
-          brightYellow: '#633c01',
-          brightBlue: '#218bff',
-          brightMagenta: '#a475f9',
-          brightCyan: '#3192aa',
-          brightWhite: '#8c959f'
-        }
-      : {
-          background: '#0d1117',
-          foreground: '#c9d1d9',
-          cursor: '#58a6ff',
-          cursorAccent: '#0d1117',
-          selectionBackground: '#264f78',
-          black: '#484f58',
-          red: '#ff7b72',
-          green: '#3fb950',
-          yellow: '#d29922',
-          blue: '#58a6ff',
-          magenta: '#bc8cff',
-          cyan: '#39c5cf',
-          white: '#b1bac4',
-          brightBlack: '#6e7681',
-          brightRed: '#ffa198',
-          brightGreen: '#56d364',
-          brightYellow: '#e3b341',
-          brightBlue: '#79c0ff',
-          brightMagenta: '#d2a8ff',
-          brightCyan: '#56d4dd',
-          brightWhite: '#f0f6fc'
-        };
+    this.terminal.options.theme = {
+      background: '#300a24',
+      foreground: '#ffffff',
+      cursor: '#ffffff',
+      cursorAccent: '#300a24',
+      selectionBackground: 'rgba(233, 84, 32, 0.5)',
+      selectionForeground: '#ffffff',
+      black: '#2e3436',
+      red: '#cc0000',
+      green: '#4e9a06',
+      yellow: '#c4a000',
+      blue: '#3465a4',
+      magenta: '#75507b',
+      cyan: '#06989a',
+      white: '#d3d7cf',
+      brightBlack: '#555753',
+      brightRed: '#ef2929',
+      brightGreen: '#8ae234',
+      brightYellow: '#fce94f',
+      brightBlue: '#729fcf',
+      brightMagenta: '#ad7fa8',
+      brightCyan: '#34e2e2',
+      brightWhite: '#eeeeec'
+    };
   }
 
   focus() {
