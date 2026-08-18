@@ -2325,7 +2325,227 @@ main.workspace-content {
   flex: 1;
   overflow: auto;
   padding: 0;
-  background-color: var(--bg-main);
+  background-color: var(--vscode-bg, #1e1e1e);
+}
+
+/* VS Code Themed Code & Diff Viewer */
+.vscode-editor-wrapper,
+.vscode-diff-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--vscode-bg, #1e1e1e);
+  color: var(--vscode-fg, #d4d4d4);
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  font-size: 12.5px;
+  line-height: 20px;
+  overflow: auto;
+  user-select: text;
+}
+
+[data-theme="light"] {
+  --vscode-bg: #ffffff;
+  --vscode-fg: #1f2328;
+  --vscode-gutter-bg: #ffffff;
+  --vscode-gutter-num: #6e7681;
+  --vscode-gutter-border: #e1e4e8;
+  --vscode-line-hover: rgba(0, 0, 0, 0.04);
+  --vscode-statusbar-bg: #f3f3f3;
+  --vscode-statusbar-border: #e1e4e8;
+  
+  --token-keyword: #0000ff;
+  --token-keyword-control: #af00db;
+  --token-string: #a31515;
+  --token-variable: #001080;
+  --token-comment: #008000;
+  --token-number: #098658;
+  --token-boolean: #0000ff;
+  --token-operator: #000000;
+  --token-function: #795e26;
+  --token-tag: #800000;
+  --token-bracket-1: #0431fa;
+  --token-bracket-2: #319331;
+  --token-bracket-3: #7b3814;
+}
+
+[data-theme="dark"] {
+  --vscode-bg: #1e1e1e;
+  --vscode-fg: #d4d4d4;
+  --vscode-gutter-bg: #1e1e1e;
+  --vscode-gutter-num: #858585;
+  --vscode-gutter-border: #2d2d2d;
+  --vscode-line-hover: rgba(255, 255, 255, 0.05);
+  --vscode-statusbar-bg: #252526;
+  --vscode-statusbar-border: #333333;
+  
+  --token-keyword: #569cd6;
+  --token-keyword-control: #c586c0;
+  --token-string: #ce9178;
+  --token-variable: #9cdcfe;
+  --token-comment: #6a9955;
+  --token-number: #b5cea8;
+  --token-boolean: #569cd6;
+  --token-operator: #d4d4d4;
+  --token-function: #dcdcaa;
+  --token-tag: #569cd6;
+  --token-bracket-1: #ffd700;
+  --token-bracket-2: #da70d6;
+  --token-bracket-3: #179fff;
+}
+
+:root {
+  --vscode-bg: #1e1e1e;
+  --vscode-fg: #d4d4d4;
+  --vscode-gutter-bg: #1e1e1e;
+  --vscode-gutter-num: #858585;
+  --vscode-gutter-border: #2d2d2d;
+  --vscode-line-hover: rgba(255, 255, 255, 0.05);
+  --vscode-statusbar-bg: #252526;
+  --vscode-statusbar-border: #333333;
+  
+  --token-keyword: #569cd6;
+  --token-keyword-control: #c586c0;
+  --token-string: #ce9178;
+  --token-variable: #9cdcfe;
+  --token-comment: #6a9955;
+  --token-number: #b5cea8;
+  --token-boolean: #569cd6;
+  --token-operator: #d4d4d4;
+  --token-function: #dcdcaa;
+  --token-tag: #569cd6;
+  --token-bracket-1: #ffd700;
+  --token-bracket-2: #da70d6;
+  --token-bracket-3: #179fff;
+}
+
+.vscode-editor-statusbar {
+  height: 30px;
+  background: var(--vscode-statusbar-bg);
+  border-bottom: 1px solid var(--vscode-statusbar-border);
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.vscode-status-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.vscode-status-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+}
+
+.vscode-badge-lang {
+  padding: 1px 6px;
+  background: rgba(47, 129, 247, 0.15);
+  border: 1px solid rgba(47, 129, 247, 0.3);
+  color: var(--accent);
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.vscode-code-table {
+  display: flex;
+  flex-direction: column;
+  min-width: 100%;
+  width: max-content;
+  padding: 6px 0;
+  background: var(--vscode-bg);
+}
+
+.vscode-code-row {
+  display: flex;
+  align-items: stretch;
+  min-height: 20px;
+  line-height: 20px;
+  transition: background-color 0.08s ease;
+}
+
+.vscode-code-row:hover {
+  background-color: var(--vscode-line-hover);
+}
+
+.vscode-line-num {
+  width: 50px;
+  min-width: 50px;
+  padding-right: 14px;
+  text-align: right;
+  color: var(--vscode-gutter-num);
+  user-select: none;
+  font-size: 11.5px;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.vscode-line-content {
+  padding: 0 12px 0 6px;
+  white-space: pre;
+  flex: 1;
+  color: var(--vscode-fg);
+  font-family: inherit;
+}
+
+/* Syntax Token Highlighting */
+.token-keyword { color: var(--token-keyword); font-weight: 600; }
+.token-keyword-control { color: var(--token-keyword-control); font-weight: 600; }
+.token-string { color: var(--token-string); }
+.token-variable { color: var(--token-variable); }
+.token-comment { color: var(--token-comment); font-style: italic; }
+.token-number { color: var(--token-number); }
+.token-boolean { color: var(--token-boolean); font-weight: 600; }
+.token-operator { color: var(--token-operator); }
+.token-function { color: var(--token-function); }
+.token-tag { color: var(--token-tag); font-weight: 600; }
+.token-bracket-round { color: var(--token-bracket-1); }
+.token-bracket-square { color: var(--token-bracket-2); }
+.token-bracket-curly { color: var(--token-bracket-3); }
+
+/* VS Code Diff Row Overrides */
+.vscode-code-row.diff-line-header {
+  background: var(--diff-header-bg);
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.vscode-code-row.diff-line-chunk {
+  background: var(--diff-chunk-bg);
+  color: var(--diff-chunk-color);
+  border-top: 1px solid var(--diff-chunk-border);
+  border-bottom: 1px solid var(--diff-chunk-border);
+}
+
+.vscode-code-row.diff-line-add {
+  background: var(--green-diff-bg);
+}
+
+.vscode-code-row.diff-line-add .diff-prefix,
+.vscode-code-row.diff-line-add .vscode-line-num {
+  color: var(--green-diff-text);
+  font-weight: 600;
+}
+
+.vscode-code-row.diff-line-del {
+  background: var(--red-diff-bg);
+}
+
+.vscode-code-row.diff-line-del .diff-prefix,
+.vscode-code-row.diff-line-del .vscode-line-num {
+  color: var(--red-diff-text);
+  font-weight: 600;
 }
 
 .fh-modal-footer {

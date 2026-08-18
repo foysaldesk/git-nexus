@@ -1275,27 +1275,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (mode === 'diff') {
       const diffRes = await window.api.getCommitFileDiff(state.currentRepoPath, commit.hash, state.fileHistoryTarget);
       if (diffRes.success) {
-        DiffViewer.render(diffRes.diff, fhDiffContainer);
+        DiffViewer.render(diffRes.diff, fhDiffContainer, state.fileHistoryTarget);
       } else {
         fhDiffContainer.innerHTML = `<div class="diff-empty-state"><p style="color: var(--red-hover);">Diff error: ${escapeHtml(diffRes.error)}</p></div>`;
       }
     } else {
-      // Full file content at commit
+      // Full file content at commit with VS Code code viewer & syntax highlighting
       const contentRes = await window.api.getFileContentAtCommit(state.currentRepoPath, commit.hash, state.fileHistoryTarget);
       if (contentRes.success) {
-        const lines = contentRes.content.split('\n');
-        let html = '<div class="diff-container"><div class="diff-table">';
-        lines.forEach((l, idx) => {
-          html += `
-            <div class="diff-row diff-line-normal">
-              <div class="diff-num diff-num-old">${idx + 1}</div>
-              <div class="diff-prefix">&nbsp;</div>
-              <div class="diff-content">${escapeHtml(l)}</div>
-            </div>
-          `;
-        });
-        html += '</div></div>';
-        fhDiffContainer.innerHTML = html;
+        DiffViewer.renderFullFile(contentRes.content, fhDiffContainer, state.fileHistoryTarget);
       } else {
         fhDiffContainer.innerHTML = `<div class="diff-empty-state"><p style="color: var(--red-hover);">Content error: ${escapeHtml(contentRes.error)}</p></div>`;
       }
