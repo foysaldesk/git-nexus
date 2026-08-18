@@ -742,13 +742,28 @@
             </div>
           </div>
           <div class="fh-header-controls">
-            <div class="fh-search-box-wrapper">
+            <div class="fh-search-box-wrapper" id="fh-search-wrapper">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="fh-search-icon">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
-              <input id="input-fh-search-file" list="repo-files-datalist" type="text" class="fh-search-input" placeholder="Search any repository file..." />
-              <datalist id="repo-files-datalist"></datalist>
+              <input id="input-fh-search-file" type="text" class="fh-search-input" placeholder="Search repository file..." autocomplete="off" spellcheck="false" />
+              <button id="btn-clear-fh-search" class="fh-search-clear-btn" title="Clear search" style="display: none;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+              <!-- Custom File Search Dropdown Menu -->
+              <div id="fh-search-dropdown-menu" class="fh-search-dropdown-menu" style="display: none;">
+                <div class="fh-search-dropdown-header">
+                  <span id="fh-search-matches-count">Matching Files (0)</span>
+                  <span class="fh-search-hint">↑↓ navigate · Enter select</span>
+                </div>
+                <div id="fh-search-results-list" class="fh-search-results-list">
+                  <!-- Populated dynamically with rich path and file badges -->
+                </div>
+              </div>
             </div>
             <button class="modal-close-icon-btn modal-close-btn" title="Close [Esc]">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

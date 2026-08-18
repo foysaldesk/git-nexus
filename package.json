@@ -78,7 +78,7 @@
     "git-manager",
     "terminal"
   ],
-  "author": "Antigravity",
+  "author": "DevTune",
   "license": "MIT",
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",

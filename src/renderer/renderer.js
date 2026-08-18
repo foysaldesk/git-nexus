@@ -21,7 +21,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     branchFilterAhead: false,
     branchViewMode: 'flat', // 'flat' | 'tree'
     collapsedBranchFolders: new Set(),
-    historyDisplayMode: 'tree' // 'tree' | 'timeline'
+    historyDisplayMode: 'tree', // 'tree' | 'timeline'
+    allRepoFiles: [],
+    activeFhDropdownIndex: -1,
+    filteredRepoFiles: []
   };
 
   // Top Header Elements
@@ -119,8 +122,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // File History Modal Elements
   const modalFileHistory = document.getElementById('modal-file-history');
   const fhFilePathBadge = document.getElementById('fh-file-path-badge');
+  const fhSearchWrapper = document.getElementById('fh-search-wrapper');
   const inputFhSearchFile = document.getElementById('input-fh-search-file');
-  const repoFilesDatalist = document.getElementById('repo-files-datalist');
+  const btnClearFhSearch = document.getElementById('btn-clear-fh-search');
+  const fhSearchDropdownMenu = document.getElementById('fh-search-dropdown-menu');
+  const fhSearchMatchesCount = document.getElementById('fh-search-matches-count');
+  const fhSearchResultsList = document.getElementById('fh-search-results-list');
   const fhRevisionsCount = document.getElementById('fh-revisions-count');
   const fhCommitsList = document.getElementById('fh-commits-list');
   const fhSelectedCommitInfo = document.getElementById('fh-selected-commit-info');
@@ -455,18 +462,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     showToast(`Loaded repository: ${folderName}`, 'info');
   }
 
-  // Populate Repo Files Datalist
+  // Populate Repo Files List Cache
   async function populateRepoFilesDatalist() {
     if (!state.currentRepoPath) return;
     try {
       const res = await window.api.getAllRepoFiles(state.currentRepoPath);
       if (res.success && res.files) {
-        repoFilesDatalist.innerHTML = '';
-        res.files.forEach(f => {
-          const opt = document.createElement('option');
-          opt.value = f;
-          repoFilesDatalist.appendChild(opt);
-        });
+        state.allRepoFiles = res.files;
       }
     } catch (e) {
       // ignore
@@ -1652,6 +1654,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     modalFileHistory.classList.add('active');
 
+    // Ensure repo files cache is loaded
+    if (!state.allRepoFiles || state.allRepoFiles.length === 0) {
+      await populateRepoFilesDatalist();
+    }
+
     let targetPath = filePath;
     if (!targetPath && state.selectedFile) {
       targetPath = state.selectedFile.path;
@@ -1659,16 +1666,160 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (targetPath) {
       inputFhSearchFile.value = targetPath;
+      btnClearFhSearch.style.display = 'flex';
+      hideFhSearchDropdown();
       await loadFileHistory(targetPath);
     } else {
       fhFilePathBadge.textContent = 'Select or search a file';
       fhRevisionsCount.textContent = '0 Revisions';
       fhCommitsList.innerHTML = '<li style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px;">Type or search a file to inspect its full revision history</li>';
       fhDiffContainer.innerHTML = '<div class="diff-empty-state"><p>Search or pick a file to view its revision history</p></div>';
+      inputFhSearchFile.value = '';
+      btnClearFhSearch.style.display = 'none';
       inputFhSearchFile.focus();
+      showFhSearchDropdown('');
     }
   }
 
+  // Get File Extension Tag & Badge Class
+  function getFileExtBadge(path) {
+    const lower = (path || '').toLowerCase();
+    if (lower.endsWith('.blade.php')) return { ext: 'BLADE', cls: 'ext-blade' };
+    if (lower.endsWith('.php')) return { ext: 'PHP', cls: 'ext-php' };
+    if (lower.endsWith('.js') || lower.endsWith('.jsx') || lower.endsWith('.mjs')) return { ext: 'JS', cls: 'ext-js' };
+    if (lower.endsWith('.ts') || lower.endsWith('.tsx')) return { ext: 'TS', cls: 'ext-ts' };
+    if (lower.endsWith('.json')) return { ext: 'JSON', cls: 'ext-json' };
+    if (lower.endsWith('.css') || lower.endsWith('.scss') || lower.endsWith('.sass') || lower.endsWith('.less')) return { ext: 'CSS', cls: 'ext-css' };
+    if (lower.endsWith('.html') || lower.endsWith('.htm')) return { ext: 'HTML', cls: 'ext-html' };
+    const parts = lower.split('.');
+    const ext = parts.length > 1 ? parts[parts.length - 1].slice(0, 5) : 'FILE';
+    return { ext: ext.toUpperCase(), cls: 'ext-default' };
+  }
+
+  // Highlight matched query substring
+  function highlightSearchQuery(text, query) {
+    if (!query) return escapeHtml(text);
+    const escapedText = escapeHtml(text);
+    const escapedQuery = escapeHtml(query);
+    const idx = escapedText.toLowerCase().indexOf(escapedQuery.toLowerCase());
+    if (idx === -1) return escapedText;
+    const match = escapedText.substring(idx, idx + escapedQuery.length);
+    return `${escapedText.substring(0, idx)}<span class="fh-match-highlight">${match}</span>${escapedText.substring(idx + escapedQuery.length)}`;
+  }
+
+  // Show Custom Floating Search Dropdown
+  function showFhSearchDropdown(query = '') {
+    if (!state.allRepoFiles || state.allRepoFiles.length === 0) return;
+
+    const trimmed = query.trim().toLowerCase();
+    btnClearFhSearch.style.display = trimmed ? 'flex' : 'none';
+
+    let matches = [];
+    if (!trimmed) {
+      matches = state.allRepoFiles.slice(0, 35);
+    } else {
+      // Score and rank matches: matches in filename rank higher than matches in folder path
+      matches = state.allRepoFiles
+        .filter(f => f.toLowerCase().includes(trimmed))
+        .map(f => {
+          const parts = f.split('/');
+          const filename = parts[parts.length - 1];
+          const filenameLower = filename.toLowerCase();
+          const inFilename = filenameLower.includes(trimmed);
+          const exactFilename = filenameLower === trimmed;
+          const startsWith = filenameLower.startsWith(trimmed);
+          let score = 0;
+          if (exactFilename) score = 100;
+          else if (startsWith) score = 50;
+          else if (inFilename) score = 25;
+          else score = 10;
+          return { path: f, score };
+        })
+        .sort((a, b) => b.score - a.score || a.path.localeCompare(b.path))
+        .map(item => item.path)
+        .slice(0, 45);
+    }
+
+    state.filteredRepoFiles = matches;
+    state.activeFhDropdownIndex = matches.length > 0 ? 0 : -1;
+    fhSearchMatchesCount.textContent = `Matching Files (${matches.length})`;
+    fhSearchResultsList.innerHTML = '';
+
+    if (matches.length === 0) {
+      fhSearchResultsList.innerHTML = `
+        <div class="fh-search-empty">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <span>No repository files match "${escapeHtml(query)}"</span>
+        </div>
+      `;
+      fhSearchDropdownMenu.style.display = 'flex';
+      return;
+    }
+
+    matches.forEach((filePath, idx) => {
+      const parts = filePath.split('/');
+      const filename = parts[parts.length - 1];
+      const dirPath = parts.length > 1 ? parts.slice(0, -1).join('/') + '/' : '';
+
+      const { ext, cls } = getFileExtBadge(filePath);
+      const highlightedFilename = highlightSearchQuery(filename, query);
+      const highlightedDir = highlightSearchQuery(dirPath, query);
+
+      const itemEl = document.createElement('div');
+      itemEl.className = `fh-search-item ${idx === state.activeFhDropdownIndex ? 'active-item' : ''}`;
+      itemEl.setAttribute('data-index', idx);
+      itemEl.setAttribute('data-path', filePath);
+
+      itemEl.innerHTML = `
+        <span class="fh-file-ext-badge ${cls}">${ext}</span>
+        <div class="fh-search-item-info">
+          <span class="fh-search-filename">${highlightedFilename}</span>
+          ${dirPath ? `<span class="fh-search-dirpath">${highlightedDir}</span>` : ''}
+        </div>
+      `;
+
+      itemEl.addEventListener('mouseenter', () => {
+        state.activeFhDropdownIndex = idx;
+        updateActiveDropdownItem();
+      });
+
+      itemEl.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        selectFileFromDropdown(filePath);
+      });
+
+      fhSearchResultsList.appendChild(itemEl);
+    });
+
+    fhSearchDropdownMenu.style.display = 'flex';
+  }
+
+  function updateActiveDropdownItem() {
+    const items = fhSearchResultsList.querySelectorAll('.fh-search-item');
+    items.forEach((it, i) => {
+      it.classList.toggle('active-item', i === state.activeFhDropdownIndex);
+      if (i === state.activeFhDropdownIndex) {
+        it.scrollIntoView({ block: 'nearest' });
+      }
+    });
+  }
+
+  function hideFhSearchDropdown() {
+    fhSearchDropdownMenu.style.display = 'none';
+    state.activeFhDropdownIndex = -1;
+  }
+
+  function selectFileFromDropdown(filePath) {
+    inputFhSearchFile.value = filePath;
+    btnClearFhSearch.style.display = 'flex';
+    hideFhSearchDropdown();
+    loadFileHistory(filePath);
+  }
+
+  // Load File History Timeline & Initial Diff
   async function loadFileHistory(filePath) {
     if (!filePath || !state.currentRepoPath) return;
 
@@ -1701,7 +1852,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const initials = getInitials(c.author_name);
       const avatarColor = getAvatarColor(c.author_name);
       const relTime = formatRelativeTime(c.date);
-      const shortHash = c.shortHash || c.hash.slice(0, 7);
+      const shortHash = c.shortHash || (c.hash ? c.hash.slice(0, 7) : '');
 
       li.innerHTML = `
         <div class="fh-commit-title">${escapeHtml(c.message)}</div>
@@ -1737,7 +1888,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnFhViewDiff.classList.toggle('active', mode === 'diff');
     btnFhViewFull.classList.toggle('active', mode === 'full');
 
-    const shortHash = commit.shortHash || commit.hash.slice(0, 7);
+    const shortHash = commit.shortHash || (commit.hash ? commit.hash.slice(0, 7) : '');
     const initials = getInitials(commit.author_name);
     const avatarColor = getAvatarColor(commit.author_name);
     const relTime = formatRelativeTime(commit.date);
@@ -1761,7 +1912,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         fhDiffContainer.innerHTML = `<div class="diff-empty-state"><p style="color: var(--red-hover);">Diff error: ${escapeHtml(diffRes.error)}</p></div>`;
       }
     } else {
-      // Full file content at commit with VS Code code viewer & syntax highlighting
+      // Full file content at commit with code viewer & syntax highlighting
       const contentRes = await window.api.getFileContentAtCommit(state.currentRepoPath, commit.hash, state.fileHistoryTarget);
       if (contentRes.success) {
         DiffViewer.renderFullFile(contentRes.content, fhDiffContainer, state.fileHistoryTarget);
@@ -1771,22 +1922,70 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // File History Action Triggers
+  // File History Search & Navigation Event Listeners
   btnFileHistoryQuick.addEventListener('click', () => openFileHistoryModal());
   btnDiffFileHistory.addEventListener('click', () => {
     if (state.selectedFile) openFileHistoryModal(state.selectedFile.path);
     else openFileHistoryModal();
   });
 
-  inputFhSearchFile.addEventListener('change', () => {
-    const filePath = inputFhSearchFile.value.trim();
-    if (filePath) loadFileHistory(filePath);
+  inputFhSearchFile.addEventListener('focus', () => {
+    showFhSearchDropdown(inputFhSearchFile.value);
+  });
+
+  inputFhSearchFile.addEventListener('input', () => {
+    showFhSearchDropdown(inputFhSearchFile.value);
   });
 
   inputFhSearchFile.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      const filePath = inputFhSearchFile.value.trim();
-      if (filePath) loadFileHistory(filePath);
+    if (fhSearchDropdownMenu.style.display === 'flex' && state.filteredRepoFiles.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        state.activeFhDropdownIndex = (state.activeFhDropdownIndex + 1) % state.filteredRepoFiles.length;
+        updateActiveDropdownItem();
+        return;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        state.activeFhDropdownIndex = (state.activeFhDropdownIndex - 1 + state.filteredRepoFiles.length) % state.filteredRepoFiles.length;
+        updateActiveDropdownItem();
+        return;
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (state.activeFhDropdownIndex >= 0 && state.activeFhDropdownIndex < state.filteredRepoFiles.length) {
+          selectFileFromDropdown(state.filteredRepoFiles[state.activeFhDropdownIndex]);
+        } else {
+          const val = inputFhSearchFile.value.trim();
+          if (val) {
+            hideFhSearchDropdown();
+            loadFileHistory(val);
+          }
+        }
+        return;
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        hideFhSearchDropdown();
+        return;
+      }
+    } else if (e.key === 'Enter') {
+      const val = inputFhSearchFile.value.trim();
+      if (val) {
+        hideFhSearchDropdown();
+        loadFileHistory(val);
+      }
+    }
+  });
+
+  btnClearFhSearch.addEventListener('click', (e) => {
+    e.stopPropagation();
+    inputFhSearchFile.value = '';
+    btnClearFhSearch.style.display = 'none';
+    showFhSearchDropdown('');
+    inputFhSearchFile.focus();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (fhSearchWrapper && !fhSearchWrapper.contains(e.target)) {
+      hideFhSearchDropdown();
     }
   });
 
