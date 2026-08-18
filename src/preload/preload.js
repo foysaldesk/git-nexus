@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('api', {
   initRepo: (repoPath) => ipcRenderer.invoke('git:initRepo', repoPath),
   getStatus: (repoPath) => ipcRenderer.invoke('git:getStatus', repoPath),
   getBranches: (repoPath) => ipcRenderer.invoke('git:getBranches', repoPath),
+  getAheadCommits: (repoPath, branchName, targetBranch) =>
+    ipcRenderer.invoke('git:getAheadCommits', repoPath, branchName, targetBranch),
   createBranch: (repoPath, branchName, baseBranch, checkout) =>
     ipcRenderer.invoke('git:createBranch', repoPath, branchName, baseBranch, checkout),
   checkoutBranch: (repoPath, branchName, createIfMissing) =>

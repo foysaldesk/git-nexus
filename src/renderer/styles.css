@@ -436,10 +436,11 @@ aside.sidebar {
 }
 
 .sidebar-header {
-  padding: 12px 16px 8px;
+  padding: 10px 14px 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 
 .sidebar-title {
@@ -448,6 +449,63 @@ aside.sidebar {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.explorer-mode-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  line-height: 1.3;
+}
+
+.explorer-mode-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.explorer-mode-btn.active {
+  background: rgba(35, 134, 54, 0.18);
+  color: #3fb950;
+  border-color: rgba(63, 185, 80, 0.45);
+  box-shadow: 0 0 6px rgba(63, 185, 80, 0.15);
+}
+
+.badge-ahead-mini {
+  background: rgba(35, 134, 54, 0.25);
+  color: #3fb950;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 8px;
+  border: 1px solid rgba(63, 185, 80, 0.35);
+  line-height: 1.2;
+}
+
+.section-ahead-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(35, 134, 54, 0.15);
+  color: #3fb950;
+  border: 1px solid rgba(63, 185, 80, 0.3);
 }
 
 .branch-section {
@@ -478,7 +536,7 @@ aside.sidebar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px 6px 10px;
+  padding: 5px 8px 5px 10px;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   cursor: pointer;
@@ -502,10 +560,14 @@ aside.sidebar {
   font-weight: 600;
 }
 
+.branch-item.is-ahead-branch {
+  border-left: 2px solid #3fb950;
+}
+
 .branch-name-box {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   min-width: 0;
   flex: 1;
   overflow: hidden;
@@ -528,6 +590,137 @@ aside.sidebar {
   white-space: nowrap;
   min-width: 0;
   flex: 1;
+}
+
+.branch-status-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.branch-badge-ahead {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+  background: rgba(35, 134, 54, 0.18);
+  color: #3fb950;
+  border: 1px solid rgba(63, 185, 80, 0.4);
+  font-family: var(--font-sans);
+  line-height: 1.2;
+  transition: all 0.12s ease;
+}
+
+.branch-badge-ahead:hover {
+  background: rgba(35, 134, 54, 0.32);
+  transform: scale(1.05);
+}
+
+.branch-badge-behind {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+  background: rgba(210, 153, 34, 0.18);
+  color: #e3b341;
+  border: 1px solid rgba(227, 179, 65, 0.4);
+  font-family: var(--font-sans);
+  line-height: 1.2;
+}
+
+.branch-badge-local {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: rgba(139, 148, 158, 0.14);
+  color: var(--text-muted);
+  border: 1px solid rgba(139, 148, 158, 0.25);
+  font-family: var(--font-sans);
+  line-height: 1.2;
+}
+
+.branch-badge-gone {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  font-family: var(--font-sans);
+}
+
+.branch-badge-synced {
+  color: #3fb950;
+  opacity: 0.6;
+  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.branch-folder-item {
+  list-style: none;
+  margin-top: 1px;
+}
+
+.branch-folder-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.branch-folder-header:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.branch-folder-chevron {
+  transition: transform 0.15s ease;
+  color: var(--text-muted);
+}
+
+.branch-folder-item.collapsed .branch-folder-chevron {
+  transform: rotate(-90deg);
+}
+
+.branch-folder-children {
+  padding-left: 10px;
+  border-left: 1px solid var(--border-subtle);
+  margin-left: 9px;
+  margin-top: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.branch-folder-item.collapsed .branch-folder-children {
+  display: none;
+}
+
+.folder-badge-count {
+  font-size: 9px;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  padding: 1px 5px;
+  border-radius: 8px;
+  margin-left: auto;
+  border: 1px solid var(--border-subtle);
 }
 
 .branch-current-badge {
@@ -796,6 +989,140 @@ main.workspace-content {
   transform: translateX(0);
 }
 
+/* Staging Branch DAG Ahead Graph Section (Layout matching Ahead Mockup) */
+.staging-branch-graph-section {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 180px;
+  max-height: 380px;
+  border-bottom: 1px solid var(--border-color);
+  overflow: hidden;
+  background: var(--bg-sidebar);
+  transition: all 0.2s ease;
+}
+
+.staging-branch-graph-section.collapsed {
+  flex: 0 0 auto;
+  min-height: 0;
+  max-height: 37px;
+}
+
+.staging-branch-graph-section.collapsed .staging-branch-graph-container {
+  display: none;
+}
+
+.staging-branch-graph-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 6px 8px;
+  background: var(--bg-sidebar);
+}
+
+.staging-graph-table {
+  display: flex;
+  flex-direction: column;
+  min-width: 100%;
+  width: max-content;
+}
+
+.staging-graph-row {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  min-height: 28px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.12s ease;
+  font-size: 11.5px;
+  user-select: none;
+  padding-right: 8px;
+  gap: 2px;
+}
+
+.staging-graph-row:hover {
+  background: var(--bg-card-hover);
+}
+
+.staging-graph-row.is-head {
+  background: rgba(31, 111, 235, 0.08);
+}
+
+.staging-graph-track {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.staging-graph-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.staging-graph-subject {
+  font-size: 11.5px;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* Head Badge with nested HEAD subtag pill */
+.gitk-badge-head-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #1f6feb;
+  color: #ffffff;
+  border: 1.5px solid #388bfd;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 4px 1px 6px;
+  gap: 4px;
+  font-family: var(--font-mono);
+  box-shadow: 0 1px 3px rgba(31, 111, 235, 0.3);
+}
+
+.gitk-badge-head-pill .head-subtag {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  font-size: 9px;
+  padding: 0 3px;
+  border-radius: 2px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.gitk-badge-green-pill {
+  display: inline-flex;
+  align-items: center;
+  background: #238636;
+  color: #ffffff;
+  border: 1.5px solid #2ea043;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.gitk-badge-yellow-tag {
+  display: inline-flex;
+  align-items: center;
+  background: #d29922;
+  color: #000000;
+  border: 1.5px solid #e3b341;
+  border-radius: 3px;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+}
+
 /* Commit Box */
 .commit-box {
   padding: 12px;
@@ -1032,6 +1359,211 @@ main.workspace-content {
 .search-commits-input:focus {
   border-color: var(--border-active);
   box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.history-view-switcher {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  gap: 2px;
+}
+
+.history-view-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.12s ease;
+}
+
+.history-view-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-card-hover);
+}
+
+.history-view-btn.active {
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Git DAG Tree Graph Container */
+.git-graph-tree-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 12px 16px;
+  background-color: var(--bg-main);
+}
+
+.git-graph-table {
+  display: flex;
+  flex-direction: column;
+  min-width: 100%;
+  width: max-content;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-sidebar);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.graph-row {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  min-height: 34px;
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  user-select: none;
+}
+
+.graph-row:last-child {
+  border-bottom: none;
+}
+
+.graph-row:hover {
+  background: var(--bg-card-hover);
+}
+
+.graph-row.selected {
+  background: rgba(47, 129, 247, 0.15);
+  border-left: 3px solid var(--accent);
+}
+
+.graph-row.is-ahead-row {
+  background: rgba(35, 134, 54, 0.08);
+}
+
+.graph-row.is-ahead-row:hover {
+  background: rgba(35, 134, 54, 0.14);
+}
+
+.graph-track-cell {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.graph-svg {
+  display: block;
+  height: 34px;
+  overflow: visible;
+}
+
+.graph-info-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 6px;
+  padding-right: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.graph-refs-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.gitk-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  line-height: 1.3;
+  font-family: var(--font-mono);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+}
+
+.gitk-badge-branch {
+  background: #238636;
+  color: #ffffff;
+  border: 1px solid #2ea043;
+}
+
+.gitk-badge-head {
+  background: #1f6feb;
+  color: #ffffff;
+  border: 1px solid #388bfd;
+  box-shadow: 0 0 6px rgba(56, 139, 253, 0.4);
+}
+
+.gitk-badge-tag {
+  background: #d29922;
+  color: #ffffff;
+  border: 1px solid #e3b341;
+}
+
+.gitk-badge-remote {
+  background: #6e40c9;
+  color: #ffffff;
+  border: 1px solid #8957e5;
+}
+
+.gitk-badge-ahead {
+  background: rgba(35, 134, 54, 0.25);
+  color: #3fb950;
+  border: 1px solid rgba(63, 185, 80, 0.5);
+  font-size: 10px;
+}
+
+.graph-commit-subject {
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 180px;
+}
+
+.graph-commit-author {
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 110px;
+}
+
+.graph-commit-date {
+  color: var(--text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 90px;
+}
+
+.graph-commit-hash {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--bg-panel);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .commits-timeline-container {

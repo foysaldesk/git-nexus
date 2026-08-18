@@ -94,6 +94,10 @@ ipcMain.handle('git:getBranches', async (_, repoPath) => {
   return await gitService.getBranches(repoPath);
 });
 
+ipcMain.handle('git:getAheadCommits', async (_, repoPath, branchName, targetBranch) => {
+  return await gitService.getAheadCommits(repoPath, branchName, targetBranch);
+});
+
 ipcMain.handle('git:createBranch', async (_, repoPath, branchName, baseBranch, checkout) => {
   return await gitService.createBranch(repoPath, branchName, baseBranch, checkout);
 });

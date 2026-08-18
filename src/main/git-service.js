@@ -106,30 +106,123 @@ class GitService {
       const git = this.getGit(repoPath);
       const branchSummary = await git.branch(['-a']);
 
+      // 1. Query rich ref data including upstream tracking and ahead/behind counts
+      let refMap = new Map();
+      try {
+        const rawRefs = await git.raw([
+          'for-each-ref',
+          '--format=%(refname)|%(refname:short)|%(upstream:short)|%(upstream:track)|%(objectname:short)|%(authordate:relative)|%(contents:subject)',
+          'refs/heads/',
+          'refs/remotes/'
+        ]);
+
+        const lines = rawRefs.trim().split('\n').filter(Boolean);
+        lines.forEach(line => {
+          const parts = line.split('|');
+          if (parts.length >= 5) {
+            const [refname, shortName, upstream, track, commit, relativeDate, subject] = parts;
+            refMap.set(shortName, {
+              refname,
+              shortName,
+              upstream: upstream || null,
+              track: track || '',
+              commit: commit || '',
+              relativeDate: relativeDate || '',
+              subject: subject || ''
+            });
+          }
+        });
+      } catch {
+        refMap = new Map();
+      }
+
       const local = [];
       const remote = [];
 
+      // First gather all remote branch names
+      const remoteNames = new Set();
       Object.values(branchSummary.branches).forEach(b => {
         if (b.name.startsWith('remotes/')) {
           const cleanName = b.name.replace(/^remotes\//, '');
-          // Ignore HEAD pointers like remotes/origin/HEAD
           if (!cleanName.includes('/HEAD')) {
+            remoteNames.add(cleanName);
+          }
+        }
+      });
+
+      for (const b of Object.values(branchSummary.branches)) {
+        if (b.name.startsWith('remotes/')) {
+          const cleanName = b.name.replace(/^remotes\//, '');
+          if (!cleanName.includes('/HEAD')) {
+            const refInfo = refMap.get(cleanName) || {};
             remote.push({
               name: cleanName,
               fullName: b.name,
-              commit: b.commit,
-              label: b.label
+              commit: b.commit || refInfo.commit || '',
+              label: b.label,
+              relativeDate: refInfo.relativeDate || '',
+              subject: refInfo.subject || ''
             });
           }
         } else {
+          const refInfo = refMap.get(b.name) || {};
+          let ahead = 0;
+          let behind = 0;
+          let isGone = false;
+          let upstream = refInfo.upstream || null;
+
+          if (refInfo.track) {
+            const aheadMatch = refInfo.track.match(/ahead\s+(\d+)/);
+            if (aheadMatch) ahead = parseInt(aheadMatch[1], 10);
+            const behindMatch = refInfo.track.match(/behind\s+(\d+)/);
+            if (behindMatch) behind = parseInt(behindMatch[1], 10);
+            if (refInfo.track.includes('gone')) isGone = true;
+          }
+
+          // If no upstream is explicitly tracked, check if matching origin branch exists
+          let isLocalOnly = false;
+          if (!upstream) {
+            const defaultRemoteName = `origin/${b.name}`;
+            if (remoteNames.has(defaultRemoteName)) {
+              try {
+                const countRaw = await git.raw(['rev-list', '--left-right', '--count', `${b.name}...${defaultRemoteName}`]);
+                const [l, r] = countRaw.trim().split(/\s+/).map(Number);
+                if (!isNaN(l)) ahead = l;
+                if (!isNaN(r)) behind = r;
+                upstream = defaultRemoteName;
+              } catch {
+                // Ignore rev-list error
+              }
+            } else {
+              isLocalOnly = true;
+              // Check how many commits ahead of HEAD / default branch if possible
+              try {
+                const countRaw = await git.raw(['rev-list', '--count', b.name, '^refs/remotes/origin/HEAD']);
+                const count = parseInt(countRaw.trim(), 10);
+                if (!isNaN(count) && count > 0) {
+                  ahead = count;
+                }
+              } catch {
+                // fallback
+              }
+            }
+          }
+
           local.push({
             name: b.name,
             current: b.current,
-            commit: b.commit,
-            label: b.label
+            commit: b.commit || refInfo.commit || '',
+            label: b.label,
+            upstream,
+            ahead,
+            behind,
+            isGone,
+            isLocalOnly,
+            relativeDate: refInfo.relativeDate || '',
+            subject: refInfo.subject || ''
           });
         }
-      });
+      }
 
       return {
         success: true,
@@ -142,6 +235,51 @@ class GitService {
       };
     } catch (err) {
       return { success: false, error: err.message };
+    }
+  }
+
+  async getAheadCommits(repoPath, branchName, targetBranch = null) {
+    try {
+      const git = this.getGit(repoPath);
+      const branches = await this.getBranches(repoPath);
+      let upstream = targetBranch;
+
+      if (!upstream) {
+        const local = branches.data?.local.find(b => b.name === branchName);
+        upstream = local?.upstream;
+        if (!upstream && branches.data?.remote.some(r => r.name === `origin/${branchName}`)) {
+          upstream = `origin/${branchName}`;
+        }
+      }
+
+      if (!upstream) {
+        const remotes = branches.data?.remote.map(r => r.name) || [];
+        if (remotes.includes('origin/main')) upstream = 'origin/main';
+        else if (remotes.includes('origin/master')) upstream = 'origin/master';
+      }
+
+      if (!upstream) {
+        return { success: true, data: [], upstream: null };
+      }
+
+      const log = await git.log({
+        from: upstream,
+        to: branchName,
+        format: {
+          hash: '%H',
+          shortHash: '%h',
+          date: '%ai',
+          authorDate: '%ad',
+          message: '%s',
+          body: '%b',
+          author_name: '%an',
+          author_email: '%ae'
+        }
+      });
+
+      return { success: true, data: log.all, upstream };
+    } catch (err) {
+      return { success: false, error: err.message, data: [] };
     }
   }
 
@@ -354,31 +492,42 @@ class GitService {
   async getHistory(repoPath, options = {}) {
     try {
       const git = this.getGit(repoPath);
-      const maxCount = typeof options === 'number' ? options : (options.maxCount || 100);
+      const maxCount = typeof options === 'number' ? options : (options.maxCount || 300);
       const branch = typeof options === 'object' && options.branch ? options.branch : null;
+      const all = typeof options === 'object' && options.all !== undefined ? options.all : true;
 
-      const logOptions = {
-        maxCount,
-        format: {
-          hash: '%H',
-          shortHash: '%h',
-          date: '%ai',
-          authorDate: '%ad',
-          message: '%s',
-          body: '%b',
-          author_name: '%an',
-          author_email: '%ae',
-          refs: '%D',
-          parents: '%P'
-        }
-      };
+      const args = [
+        'log',
+        `-n`, `${maxCount}`,
+        '--topo-order',
+        '--format=%H|%h|%P|%D|%an|%ae|%ad|%ai|%s'
+      ];
 
       if (branch) {
-        logOptions[branch] = null;
+        args.push(branch);
+      } else if (all) {
+        args.push('--all');
       }
 
-      const log = await git.log(logOptions);
-      return { success: true, data: log.all };
+      const raw = await git.raw(args);
+      const lines = raw.trim().split('\n').filter(Boolean);
+      const commits = lines.map(line => {
+        const parts = line.split('|');
+        const [hash, shortHash, parentsStr, refs, author_name, author_email, authorDate, date, message] = parts;
+        return {
+          hash,
+          shortHash: shortHash || (hash ? hash.slice(0, 7) : ''),
+          parents: parentsStr ? parentsStr.trim().split(/\s+/).filter(Boolean) : [],
+          refs: refs ? refs.trim() : '',
+          author_name: author_name || 'Unknown',
+          author_email: author_email || '',
+          authorDate: authorDate || '',
+          date: date || '',
+          message: message || ''
+        };
+      });
+
+      return { success: true, data: commits };
     } catch (err) {
       return { success: false, error: err.message, data: [] };
     }
@@ -388,39 +537,51 @@ class GitService {
     try {
       const git = this.getGit(repoPath);
 
-      // 1. Get commit metadata & parents
-      const commitLog = await git.log({
-        maxCount: 1,
-        from: hash,
-        to: hash,
-        format: {
-          hash: '%H',
-          shortHash: '%h',
-          date: '%ai',
-          message: '%s',
-          body: '%b',
-          author_name: '%an',
-          author_email: '%ae',
-          refs: '%D',
-          parents: '%P'
-        }
-      });
-      const meta = commitLog.all && commitLog.all[0] ? commitLog.all[0] : { hash };
-      const parents = (meta.parents || '').trim().split(' ').filter(Boolean);
+      // 1. Get commit metadata & parents using git.raw (reliable for any single commit SHA)
+      const rawLog = await git.raw(['log', '-1', '--format=%H|%h|%P|%D|%an|%ae|%ad|%ai|%s', hash]);
+      const logParts = rawLog.trim().split('|');
+      const [fullHash, shortHash, parentsStr, refs, author_name, author_email, authorDate, date, message] = logParts;
 
-      // 2. Get numstat for changed files (handling merge commits with --first-parent)
+      let body = '';
+      try {
+        body = await git.raw(['log', '-1', '--format=%b', hash]);
+      } catch (e) {
+        body = '';
+      }
+
+      const parents = parentsStr ? parentsStr.trim().split(/\s+/).filter(Boolean) : [];
+      const meta = {
+        hash: fullHash || hash,
+        shortHash: shortHash || (fullHash ? fullHash.slice(0, 7) : hash.slice(0, 7)),
+        date: date || authorDate || '',
+        message: message || '',
+        body: (body || '').trim(),
+        author_name: author_name || 'Unknown',
+        author_email: author_email || '',
+        refs: refs || '',
+        parents: parentsStr || ''
+      };
+
+      // 2. Get numstat for changed files (handling root commits, normal commits, and merge commits)
       let numstatRaw = '';
       try {
         if (parents.length > 1) {
           numstatRaw = await git.raw(['show', '-m', '--first-parent', '--numstat', '--format=', hash]);
-        } else {
+        } else if (parents.length === 1) {
           numstatRaw = await git.raw(['show', '--numstat', '--format=', hash]);
+        } else {
+          // Root commit (0 parents)
+          numstatRaw = await git.raw(['show', '--root', '--numstat', '--format=', hash]);
         }
       } catch (e) {
         try {
           numstatRaw = await git.raw(['show', '--numstat', '--format=', hash]);
         } catch (e2) {
-          numstatRaw = '';
+          try {
+            numstatRaw = await git.raw(['diff-tree', '--no-commit-id', '--name-only', '-r', hash]);
+          } catch (e3) {
+            numstatRaw = '';
+          }
         }
       }
 
@@ -443,12 +604,19 @@ class GitService {
             deletions,
             isBinary: parts[0] === '-' || parts[1] === '-'
           });
+        } else if (parts.length === 1 && line.trim()) {
+          files.push({
+            path: line.trim(),
+            additions: 0,
+            deletions: 0,
+            isBinary: false
+          });
         }
       });
 
-      // 3. Extract diffs for initial preview (up to first 12 files)
+      // 3. Extract diffs for initial preview (up to first 25 files)
       const fileDiffs = [];
-      const filesToPreview = files.slice(0, 12);
+      const filesToPreview = files.slice(0, 25);
 
       for (const f of filesToPreview) {
         try {
@@ -484,7 +652,7 @@ class GitService {
     try {
       const git = this.getGit(repoPath);
       const parentsRaw = await git.raw(['log', '-1', '--format=%P', hash]);
-      const parents = parentsRaw.trim().split(' ').filter(Boolean);
+      const parents = parentsRaw.trim().split(/\s+/).filter(Boolean);
 
       let diff = '';
       if (parents.length > 0) {
@@ -496,6 +664,12 @@ class GitService {
       if (!diff) {
         try {
           diff = await git.raw(['show', '--format=', hash, '--', filePath]);
+        } catch (e) {}
+      }
+
+      if (!diff) {
+        try {
+          diff = await git.raw(['diff-tree', '-p', '--root', hash, '--', filePath]);
         } catch (e) {}
       }
 
