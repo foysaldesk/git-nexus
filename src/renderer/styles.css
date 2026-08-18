@@ -2428,13 +2428,50 @@ html[data-theme="light"],
   gap: 8px;
   color: var(--text-primary);
   font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.vscode-status-filepath {
+  color: var(--text-primary);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .vscode-status-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.vscode-btn-copy-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vscode-btn-copy-code:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border-color: var(--border-active);
+}
+
+.vscode-btn-copy-code svg {
+  color: inherit;
 }
 
 .vscode-badge-lang {

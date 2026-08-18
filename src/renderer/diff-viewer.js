@@ -117,6 +117,13 @@ class DiffViewer {
             <span class="vscode-status-filepath">${this.escapeHtml(filename || 'file')}</span>
           </div>
           <div class="vscode-status-right">
+            <button class="vscode-btn-copy-code" id="btn-copy-full-content" title="Copy full file content">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span>Copy</span>
+            </button>
             <span class="vscode-badge-lang">${lang.toUpperCase()}</span>
             <span class="vscode-status-lines">${lines.length.toLocaleString()} lines</span>
           </div>
@@ -137,6 +144,23 @@ class DiffViewer {
 
     html += '</div></div>';
     containerElement.innerHTML = html;
+
+    const copyBtn = containerElement.querySelector('#btn-copy-full-content');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(fileContent);
+        const originalHtml = copyBtn.innerHTML;
+        copyBtn.innerHTML = `
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span style="color: #3fb950; font-weight: 600;">Copied!</span>
+        `;
+        setTimeout(() => {
+          copyBtn.innerHTML = originalHtml;
+        }, 1800);
+      });
+    }
   }
 
   static detectLanguage(filename = '') {
