@@ -420,21 +420,16 @@
       </main>
     </div>
 
-    <!-- Bottom Collapsible Terminal Drawer (Ubuntu Terminal Theme) -->
+    <!-- Bottom Collapsible Terminal Drawer -->
     <div id="terminal-drawer" class="terminal-drawer collapsed ubuntu-terminal">
       <div class="terminal-header ubuntu-header">
         <div class="terminal-header-left">
-          <div class="ubuntu-window-controls">
-            <button class="ubuntu-btn ubuntu-btn-close" id="btn-terminal-close" title="Close Terminal"></button>
-            <button class="ubuntu-btn ubuntu-btn-min" id="btn-terminal-minimize" title="Minimize Terminal"></button>
-            <button class="ubuntu-btn ubuntu-btn-max" id="btn-terminal-size" title="Maximize/Restore Terminal"></button>
-          </div>
           <div class="terminal-tab-pill">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="4 17 10 11 4 5"></polyline>
               <line x1="12" y1="19" x2="20" y2="19"></line>
             </svg>
-            <span id="terminal-cwd-label">user@ubuntu: ~</span>
+            <span id="terminal-cwd-label">Terminal</span>
           </div>
         </div>
 
@@ -445,13 +440,18 @@
           <button class="cmd-chip ubuntu-chip" data-cmd="git remote -v">git remote -v</button>
         </div>
 
-        <div class="terminal-header-actions" style="display: flex; gap: 6px; align-items: center;">
+        <div class="terminal-header-actions" style="display: flex; gap: 10px; align-items: center;">
           <button id="btn-terminal-clear" class="btn btn-icon ubuntu-action-btn" title="Clear Terminal (Ctrl+L)" style="padding: 2px 6px;">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
             </svg>
           </button>
+          <div class="ubuntu-window-controls">
+            <button class="ubuntu-btn ubuntu-btn-min" id="btn-terminal-minimize" title="Minimize Terminal"></button>
+            <button class="ubuntu-btn ubuntu-btn-max" id="btn-terminal-size" title="Maximize/Restore Terminal"></button>
+            <button class="ubuntu-btn ubuntu-btn-close" id="btn-terminal-close" title="Close Terminal"></button>
+          </div>
         </div>
       </div>
       <div id="terminal-container" class="terminal-container ubuntu-container"></div>

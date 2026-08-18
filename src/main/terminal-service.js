@@ -62,7 +62,7 @@ class TerminalService {
     const user = this.getUsername();
     const cleanPath = this.getCleanPath();
     const prefix = withLeadingNewline ? '\r\n' : '';
-    return `${prefix}\x1b[1;32m${user}@ubuntu\x1b[0m:\x1b[1;34m${cleanPath}\x1b[0m$ `;
+    return `${prefix}\x1b[1;32m${user}\x1b[0m:\x1b[1;34m${cleanPath}\x1b[0m$ `;
   }
 
   startSession(cwd = process.cwd()) {
@@ -75,10 +75,7 @@ class TerminalService {
     const user = this.getUsername();
     const cleanPath = this.getCleanPath();
 
-    // Send Ubuntu banner and styled prompt
-    this.emitData(`\x1b[1;33mWelcome to Ubuntu 24.04 LTS (Git Nexus Shell)\x1b[0m\r\n`);
-    this.emitData(` * Repository: \x1b[36m${cleanPath}\x1b[0m\r\n\r\n`);
-    this.emitData(`\x1b[1;32m${user}@ubuntu\x1b[0m:\x1b[1;34m${cleanPath}\x1b[0m$ `);
+    this.emitData(`\x1b[1;32m${user}\x1b[0m:\x1b[1;34m${cleanPath}\x1b[0m$ `);
 
     return { success: true, cwd: this.currentCwd };
   }

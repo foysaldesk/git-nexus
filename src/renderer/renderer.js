@@ -418,8 +418,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     activeRepoPill.title = repoPath;
 
     // Update Terminal CWD
-    const cleanRepoPath = repoPath.replace(/\\/g, '/');
-    terminalCwdLabel.textContent = `ubuntu: ~/${folderName}`;
+    terminalCwdLabel.textContent = `~/${folderName}`;
     await window.api.setTerminalCwd(repoPath);
 
     // Populate Datalist for File Search
