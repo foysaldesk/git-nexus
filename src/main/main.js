@@ -6,11 +6,16 @@ const terminalService = require('./terminal-service');
 let mainWindow = null;
 
 function createWindow() {
+  const iconPath = process.platform === 'win32'
+    ? path.join(__dirname, '../../assets/icon.ico')
+    : path.join(__dirname, '../../assets/icon.png');
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 850,
     minWidth: 960,
     minHeight: 600,
+    icon: iconPath,
     backgroundColor: '#011c46ff',
     title: 'Git Nexus - Repository Manager',
     frame: true,

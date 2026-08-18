@@ -6,7 +6,8 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
-    "test": "node test-git-service.js"
+    "test": "node test-git-service.js",
+    "generate:icons": "electron scripts/generate-icons.js"
   },
   "keywords": [
     "git",
