@@ -76,8 +76,34 @@ npm install
 npm start
 ```
 
+### 📦 Building Standalone Executables (Windows / macOS / Linux)
+
+To package and build installer executables using `electron-builder`:
+
+```bash
+# Build for Windows (NSIS installer .exe & Portable .exe)
+npm run build:win
+
+# Build Windows Portable EXE only
+npm run build:win:portable
+
+# Generate / Refresh cross-platform icons
+npm run generate:icons
+
+# Build for all supported platforms
+npm run build:all
+```
+
+The compiled binaries will be output into the `dist/` directory:
+- `dist/Git Nexus Setup 1.0.0.exe` (Windows Installer)
+- `dist/Git Nexus-Portable-1.0.0.exe` (Portable Single-file EXE)
+
+---
+
 ### Keyboard Shortcuts
 - `Ctrl + R` / `Cmd + R`: Refresh Git status
 - `Ctrl + O` / `Cmd + O`: Open / Browse repository directory
 - `Ctrl + ` ` / `Cmd + ` `: Toggle integrated terminal drawer
 - `Ctrl + Enter` / `Cmd + Enter`: Commit staged changes
+- `Ctrl + H`: Open File History Explorer
+
