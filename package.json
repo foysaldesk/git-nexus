@@ -1,6 +1,6 @@
 {
   "name": "git-nexus-desktop",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Modern Graphical Git Repository Manager and Terminal built with Electron",
   "main": "src/main/main.js",
   "scripts": {

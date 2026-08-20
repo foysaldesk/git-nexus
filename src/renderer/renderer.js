@@ -1345,21 +1345,47 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // Get File Extension Tag & Badge Class
+  function getFileExtBadge(path) {
+    const lower = (path || '').toLowerCase();
+    if (lower.endsWith('.blade.php')) return { ext: 'BLADE', cls: 'ext-blade' };
+    if (lower.endsWith('.php')) return { ext: 'PHP', cls: 'ext-php' };
+    if (lower.endsWith('.js') || lower.endsWith('.jsx') || lower.endsWith('.mjs') || lower.endsWith('.cjs')) return { ext: 'JS', cls: 'ext-js' };
+    if (lower.endsWith('.ts') || lower.endsWith('.tsx')) return { ext: 'TS', cls: 'ext-ts' };
+    if (lower.endsWith('.json')) return { ext: 'JSON', cls: 'ext-json' };
+    if (lower.endsWith('.css') || lower.endsWith('.scss') || lower.endsWith('.sass') || lower.endsWith('.less')) return { ext: 'CSS', cls: 'ext-css' };
+    if (lower.endsWith('.html') || lower.endsWith('.htm')) return { ext: 'HTML', cls: 'ext-html' };
+    if (lower.endsWith('.md') || lower.endsWith('.markdown')) return { ext: 'MD', cls: 'ext-md' };
+    if (lower.endsWith('.py')) return { ext: 'PY', cls: 'ext-py' };
+    if (lower.endsWith('.go')) return { ext: 'GO', cls: 'ext-go' };
+    if (lower.endsWith('.rs')) return { ext: 'RS', cls: 'ext-rs' };
+    if (lower.endsWith('.svg')) return { ext: 'SVG', cls: 'ext-svg' };
+    const parts = lower.split('/');
+    const filename = parts[parts.length - 1];
+    const fileParts = filename.split('.');
+    const ext = fileParts.length > 1 ? fileParts[fileParts.length - 1].slice(0, 5) : 'FILE';
+    return { ext: ext.toUpperCase(), cls: 'ext-default' };
+  }
+
   // Create Focused Single-File Diff View
   function createFocusedDiffView(file, preloadedDiff = null) {
     const container = document.createElement('div');
     container.className = 'commit-focused-file-container';
 
+    const lastSlash = file.path.lastIndexOf('/');
+    const dirPart = lastSlash !== -1 ? file.path.substring(0, lastSlash + 1) : '';
+    const filePart = lastSlash !== -1 ? file.path.substring(lastSlash + 1) : file.path;
+    const extBadge = getFileExtBadge(file.path);
+
     container.innerHTML = `
       <div class="focused-file-header">
         <div class="focused-file-info">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; color: var(--accent);">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-          </svg>
-          <span class="focused-file-path" title="${escapeHtml(file.path)}">${escapeHtml(file.path)}</span>
-          <button class="branch-btn-icon btn-copy-filepath" title="Copy file path" style="padding: 2px 4px; flex-shrink: 0;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <span class="file-type-pill ${extBadge.cls}">${extBadge.ext}</span>
+          <div class="file-diff-path-text" title="${escapeHtml(file.path)}">
+            ${dirPart ? `<span class="diff-path-dir">${escapeHtml(dirPart)}</span>` : ''}<span class="diff-path-name">${escapeHtml(filePart)}</span>
+          </div>
+          <button class="branch-btn-icon btn-copy-filepath" title="Copy file path">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
             </svg>
@@ -1373,8 +1399,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             </svg>
             <span>History</span>
           </button>
-          <span class="diff-stat-add" style="margin-left: 6px;">${file.isBinary ? 'BIN' : `+${file.additions}`}</span>
-          <span class="diff-stat-del">${file.isBinary ? '' : `-${file.deletions}`}</span>
+          <div class="diff-stat-badges">
+            ${file.isBinary ? '<span class="diff-stat-binary">BIN</span>' : `
+              <span class="diff-stat-add">+${file.additions}</span>
+              <span class="diff-stat-del">-${file.deletions}</span>
+            `}
+          </div>
         </div>
       </div>
       <div class="focused-file-body">
@@ -1442,32 +1472,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     card.dataset.filePath = file.path;
     card.dataset.loaded = preloadedDiff ? 'true' : 'false';
 
+    const lastSlash = file.path.lastIndexOf('/');
+    const dirPart = lastSlash !== -1 ? file.path.substring(0, lastSlash + 1) : '';
+    const filePart = lastSlash !== -1 ? file.path.substring(lastSlash + 1) : file.path;
+    const extBadge = getFileExtBadge(file.path);
+
     card.innerHTML = `
       <div class="file-diff-card-header" title="Click to ${isExpanded ? 'collapse' : 'expand'}">
         <div class="file-diff-card-title">
-          <span class="diff-toggle-chevron">${isExpanded ? '▼' : '▶'}</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-          </svg>
-          <span class="file-diff-path-text">${escapeHtml(file.path)}</span>
-          <button class="branch-btn-icon btn-copy-filepath" title="Copy file path" style="padding: 2px 4px; flex-shrink: 0;">
+          <span class="diff-toggle-chevron ${isExpanded ? '' : 'is-collapsed'}">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </span>
+          <span class="file-type-pill ${extBadge.cls}">${extBadge.ext}</span>
+          <div class="file-diff-path-text" title="${escapeHtml(file.path)}">
+            ${dirPart ? `<span class="diff-path-dir">${escapeHtml(dirPart)}</span>` : ''}<span class="diff-path-name">${escapeHtml(filePart)}</span>
+          </div>
+          <button class="branch-btn-icon btn-copy-filepath" title="Copy file path">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
             </svg>
           </button>
-          <button class="btn-file-history-card" title="View file history">
+          <span class="collapsed-status-tag" style="display: ${isExpanded ? 'none' : 'inline-flex'};">Collapsed</span>
+        </div>
+        <div class="file-diff-card-actions">
+          <button class="btn btn-file-history-card" title="View file history">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 14 14"></polyline>
             </svg>
             <span>History</span>
           </button>
-        </div>
-        <div style="display: flex; gap: 8px; align-items: center; flex-shrink: 0;">
-          <span class="diff-stat-add">${file.isBinary ? 'BIN' : `+${file.additions}`}</span>
-          <span class="diff-stat-del">${file.isBinary ? '' : `-${file.deletions}`}</span>
+          <div class="diff-stat-badges">
+            ${file.isBinary ? '<span class="diff-stat-binary">BIN</span>' : `
+              <span class="diff-stat-add">+${file.additions}</span>
+              <span class="diff-stat-del">-${file.deletions}</span>
+            `}
+          </div>
         </div>
       </div>
       <div class="file-diff-card-body" style="display: ${isExpanded ? 'block' : 'none'};">
@@ -1516,11 +1559,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bodyEl = card.querySelector('.file-diff-card-body');
     const chevron = card.querySelector('.diff-toggle-chevron');
     const header = card.querySelector('.file-diff-card-header');
+    const statusTag = card.querySelector('.collapsed-status-tag');
     const filePath = card.dataset.filePath;
 
     card.classList.remove('collapsed');
     bodyEl.style.display = 'block';
-    if (chevron) chevron.textContent = '▼';
+    if (chevron) chevron.classList.remove('is-collapsed');
+    if (statusTag) statusTag.style.display = 'none';
     if (header) header.title = 'Click to collapse';
 
     if (card.dataset.loaded !== 'true' && filePath) {
@@ -1534,10 +1579,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bodyEl = card.querySelector('.file-diff-card-body');
     const chevron = card.querySelector('.diff-toggle-chevron');
     const header = card.querySelector('.file-diff-card-header');
+    const statusTag = card.querySelector('.collapsed-status-tag');
 
     card.classList.add('collapsed');
     bodyEl.style.display = 'none';
-    if (chevron) chevron.textContent = '▶';
+    if (chevron) chevron.classList.add('is-collapsed');
+    if (statusTag) statusTag.style.display = 'inline-flex';
     if (header) header.title = 'Click to expand';
   }
 
@@ -1681,20 +1728,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Get File Extension Tag & Badge Class
-  function getFileExtBadge(path) {
-    const lower = (path || '').toLowerCase();
-    if (lower.endsWith('.blade.php')) return { ext: 'BLADE', cls: 'ext-blade' };
-    if (lower.endsWith('.php')) return { ext: 'PHP', cls: 'ext-php' };
-    if (lower.endsWith('.js') || lower.endsWith('.jsx') || lower.endsWith('.mjs')) return { ext: 'JS', cls: 'ext-js' };
-    if (lower.endsWith('.ts') || lower.endsWith('.tsx')) return { ext: 'TS', cls: 'ext-ts' };
-    if (lower.endsWith('.json')) return { ext: 'JSON', cls: 'ext-json' };
-    if (lower.endsWith('.css') || lower.endsWith('.scss') || lower.endsWith('.sass') || lower.endsWith('.less')) return { ext: 'CSS', cls: 'ext-css' };
-    if (lower.endsWith('.html') || lower.endsWith('.htm')) return { ext: 'HTML', cls: 'ext-html' };
-    const parts = lower.split('.');
-    const ext = parts.length > 1 ? parts[parts.length - 1].slice(0, 5) : 'FILE';
-    return { ext: ext.toUpperCase(), cls: 'ext-default' };
-  }
+
 
   // Highlight matched query substring
   function highlightSearchQuery(text, query) {
