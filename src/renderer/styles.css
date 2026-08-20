@@ -2245,35 +2245,64 @@ main.workspace-content {
 .ubuntu-window-controls {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
 .ubuntu-btn {
-  width: 12px;
-  height: 12px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  border: none;
+  border: 1px solid transparent;
   cursor: pointer;
   padding: 0;
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+  color: #ffffff;
+}
+
+.ubuntu-btn svg {
+  display: block;
+  pointer-events: none;
 }
 
 .ubuntu-btn:hover {
-  opacity: 0.85;
-  transform: scale(1.15);
-}
-
-.ubuntu-btn-close {
-  background: #e95420; /* Ubuntu Orange */
+  transform: scale(1.12);
 }
 
 .ubuntu-btn-min {
   background: #5e2750; /* Ubuntu Plum */
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #dfdbd2;
+}
+
+.ubuntu-btn-min:hover {
+  background: #7a3368;
+  color: #ffffff;
 }
 
 .ubuntu-btn-max {
   background: #77216f; /* Ubuntu Magenta */
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #dfdbd2;
+}
+
+.ubuntu-btn-max:hover {
+  background: #962a8c;
+  color: #ffffff;
+}
+
+.ubuntu-btn-close {
+  background: #e95420; /* Ubuntu Orange */
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.ubuntu-btn-close:hover {
+  background: #ff6430;
+  box-shadow: 0 0 8px rgba(233, 84, 32, 0.6);
 }
 
 .terminal-tab-pill {

@@ -2916,9 +2916,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnTerminalMin.addEventListener('click', () => terminalDrawer.classList.add('collapsed'));
   }
 
+  function updateTerminalMaxIcon(isMax) {
+    if (!btnTerminalSize) return;
+    const iconMax = btnTerminalSize.querySelector('.icon-maximize');
+    const iconRestore = btnTerminalSize.querySelector('.icon-restore');
+    if (iconMax && iconRestore) {
+      iconMax.style.display = isMax ? 'none' : 'block';
+      iconRestore.style.display = isMax ? 'block' : 'none';
+    }
+    btnTerminalSize.title = isMax ? 'Restore Terminal' : 'Maximize Terminal';
+  }
+
   btnTerminalSize.addEventListener('click', () => {
     terminalDrawer.style.height = ''; // clear custom inline height
-    terminalDrawer.classList.toggle('maximized');
+    const isMax = terminalDrawer.classList.toggle('maximized');
+    updateTerminalMaxIcon(isMax);
     setTimeout(() => termManager.fit(), 220);
   });
 
@@ -2939,6 +2951,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       termStartY = e.clientY;
       termStartHeight = terminalDrawer.getBoundingClientRect().height;
       terminalDrawer.classList.remove('maximized');
+      updateTerminalMaxIcon(false);
       terminalDrawer.classList.add('resizing');
       terminalResizeHandle.classList.add('dragging');
       document.body.style.cursor = 'ns-resize';

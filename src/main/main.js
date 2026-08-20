@@ -186,3 +186,9 @@ ipcMain.handle('terminal:setCwd', async (event, cwd) => {
   terminalService.setCwd(cwd);
   return { success: true };
 });
+
+ipcMain.handle('terminal:clear', async (event) => {
+  terminalService.init(event.sender);
+  return terminalService.clearSession();
+});
+

@@ -60,6 +60,16 @@ class TerminalManager {
       if (this.terminal) this.terminal.focus();
     });
 
+    // Prevent Tab key from shifting browser focus so it triggers autocomplete
+    this.terminal.attachCustomKeyEventHandler((event) => {
+      if (event.key === 'Tab' && event.type === 'keydown') {
+        window.api.writeTerminal('\t');
+        event.preventDefault();
+        return false;
+      }
+      return true;
+    });
+
     // Send user keystrokes to main process
     this.terminal.onData(data => {
       window.api.writeTerminal(data);
@@ -98,6 +108,13 @@ class TerminalManager {
   clear() {
     if (this.terminal) {
       this.terminal.clear();
+      this.terminal.reset();
+      if (window.api && window.api.clearTerminal) {
+        window.api.clearTerminal();
+      } else if (window.api && window.api.writeTerminal) {
+        window.api.writeTerminal('\x0c');
+      }
+      this.focus();
     }
   }
 

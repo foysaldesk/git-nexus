@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('api', {
   // Terminal Operations
   startTerminal: (cwd) => ipcRenderer.invoke('terminal:start', cwd),
   writeTerminal: (data) => ipcRenderer.send('terminal:write', data),
+  clearTerminal: () => ipcRenderer.invoke('terminal:clear'),
   setTerminalCwd: (cwd) => ipcRenderer.invoke('terminal:setCwd', cwd),
   onTerminalData: (callback) => {
     const handler = (_, data) => callback(data);

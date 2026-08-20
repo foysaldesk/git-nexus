@@ -87,10 +87,30 @@ class TerminalService {
     return cleanPath;
   }
 
+  getCurrentBranch() {
+    try {
+      const gitDir = path.join(this.currentCwd, '.git');
+      if (fs.existsSync(gitDir)) {
+        const headFile = path.join(gitDir, 'HEAD');
+        if (fs.existsSync(headFile)) {
+          const content = fs.readFileSync(headFile, 'utf8').trim();
+          const match = content.match(/ref:\s*refs\/heads\/(.+)$/);
+          if (match) {
+            return match[1];
+          }
+          if (content.length >= 7) return content.slice(0, 7);
+        }
+      }
+    } catch (e) { /* ignore */ }
+    return '';
+  }
+
   getPrompt(withLeadingNewline = true) {
     const cleanPath = this.getCleanPath();
+    const branch = this.getCurrentBranch();
+    const branchStr = branch ? ` \x1b[38;5;214m(${branch})\x1b[0m` : '';
     const prefix = withLeadingNewline ? '\r\n' : '';
-    return `${prefix}\x1b[1;34m${cleanPath}\x1b[0m\x1b[1;32m$\x1b[0m `;
+    return `${prefix}\x1b[1;34m${cleanPath}\x1b[0m${branchStr}\x1b[1;32m$\x1b[0m `;
   }
 
   getRepoBranches() {
@@ -144,6 +164,108 @@ class TerminalService {
       }
     } catch (e) { /* ignore */ }
     return Array.from(new Set(branches));
+  }
+
+  getGhostSuggestion(line) {
+    if (!line || !line.trim()) return '';
+    const trimmed = line;
+    const lower = trimmed.toLowerCase();
+
+    // 1. Match from history (newest to oldest)
+    for (let i = this.history.length - 1; i >= 0; i--) {
+      const h = this.history[i];
+      if (h && h.toLowerCase().startsWith(lower) && h.length > line.length) {
+        return line + h.slice(line.length);
+      }
+    }
+
+    // 2. Match from GIT_COMMANDS
+    for (const item of GIT_COMMANDS) {
+      if (item.cmd.toLowerCase().startsWith(lower) && item.cmd.length > line.length) {
+        return line + item.cmd.slice(line.length);
+      }
+    }
+
+    // 3. Match from branches for branch operations
+    const branchKeywords = ['checkout', 'switch', 'merge', 'rebase', 'pull', 'push', 'branch'];
+    if (branchKeywords.some(kw => lower.includes(kw))) {
+      const branches = this.getRepoBranches();
+      const parts = line.split(/\s+/);
+      const isTrailingSpace = line.endsWith(' ');
+      const lastToken = isTrailingSpace ? '' : parts[parts.length - 1];
+
+      for (const b of branches) {
+        if (!lastToken || b.toLowerCase().startsWith(lastToken.toLowerCase())) {
+          let fullCmd = '';
+          if (isTrailingSpace) {
+            fullCmd = line + b;
+          } else {
+            fullCmd = parts.slice(0, -1).join(' ') + (parts.length > 1 ? ' ' : '') + b;
+          }
+          if (fullCmd.length > line.length && fullCmd.toLowerCase().startsWith(lower)) {
+            return line + fullCmd.slice(line.length);
+          }
+        }
+      }
+    }
+
+    // 4. Match from repo files for file operations
+    if (lower.startsWith('git add ') || lower.startsWith('git diff ') || lower.startsWith('git restore ') || lower.startsWith('cat ') || lower.startsWith('ls ')) {
+      try {
+        const parts = line.split(/\s+/);
+        const isTrailingSpace = line.endsWith(' ');
+        const lastToken = isTrailingSpace ? '' : parts[parts.length - 1];
+        const files = fs.readdirSync(this.currentCwd);
+        for (const f of files) {
+          if (!lastToken || f.toLowerCase().startsWith(lastToken.toLowerCase())) {
+            let fullCmd = '';
+            if (isTrailingSpace) {
+              fullCmd = line + f;
+            } else {
+              fullCmd = parts.slice(0, -1).join(' ') + (parts.length > 1 ? ' ' : '') + f;
+            }
+            if (fullCmd.length > line.length && fullCmd.toLowerCase().startsWith(lower)) {
+              return line + fullCmd.slice(line.length);
+            }
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    return '';
+  }
+
+  renderLine(oldCursorPos = this.cursorPos) {
+    let output = '';
+    // Move cursor back to beginning of line (at prompt)
+    if (oldCursorPos > 0) {
+      output += `\x1b[${oldCursorPos}D`;
+    }
+    // Clear from cursor to end of screen line
+    output += '\x1b[K';
+
+    // Output current typed line in normal color
+    output += this.currentLine;
+
+    // Calculate ghost suggestion
+    const ghostFull = this.getGhostSuggestion(this.currentLine);
+    this.currentGhostSuggestion = ghostFull;
+    let ghostSuffix = '';
+
+    if (ghostFull && ghostFull.startsWith(this.currentLine) && ghostFull.length > this.currentLine.length) {
+      ghostSuffix = ghostFull.slice(this.currentLine.length);
+      // Render ghost text in muted gray (ANSI \x1b[90m)
+      output += `\x1b[90m${ghostSuffix}\x1b[0m`;
+    }
+
+    // Move cursor back to this.cursorPos
+    const totalBack = ghostSuffix.length + (this.currentLine.length - this.cursorPos);
+    if (totalBack > 0) {
+      output += `\x1b[${totalBack}D`;
+    }
+
+    this.emitData(output);
+    this.emitSuggestions(this.currentLine);
   }
 
   emitSuggestions(inputLine = '') {
@@ -209,15 +331,25 @@ class TerminalService {
     this.currentCwd = cwd;
     this.currentLine = '';
     this.cursorPos = 0;
+    this.currentGhostSuggestion = '';
     this.historyIndex = this.history.length;
 
-    const cleanPath = this.getCleanPath();
-
     // Clear previous screen to avoid duplicated prompt lines
-    this.emitData(`\x1b[2J\x1b[H\x1b[1;34m${cleanPath}\x1b[0m\x1b[1;32m$\x1b[0m `);
+    this.emitData(`\x1b[2J\x1b[3J\x1b[H${this.getPrompt(false)}`);
     this.emitSuggestions('');
 
     return { success: true, cwd: this.currentCwd };
+  }
+
+  clearSession() {
+    this.killSession();
+    this.currentLine = '';
+    this.cursorPos = 0;
+    this.currentGhostSuggestion = '';
+    this.historyIndex = this.history.length;
+    this.emitData(`\x1b[2J\x1b[3J\x1b[H${this.getPrompt(false)}`);
+    this.emitSuggestions('');
+    return { success: true };
   }
 
   write(data) {
@@ -264,23 +396,20 @@ class TerminalService {
     if (data === '\r' || data === '\n' || data === '\r\n' || data.endsWith('\r') || data.endsWith('\n')) {
       const incomingCmd = data.replace(/[\r\n]+$/, '');
       if (incomingCmd) {
-        // If a full command was sent by clicking a suggestion chip,
-        // clear whatever partial line was currently typed on screen and in buffer
-        if (this.currentLine) {
-          let clearStr = '';
-          if (this.cursorPos > 0) {
-            clearStr += `\x1b[${this.cursorPos}D`;
-          }
-          clearStr += '\x1b[K';
-          this.emitData(clearStr);
+        // Full command sent via chip click or shortcut
+        if (this.cursorPos > 0) {
+          this.emitData(`\x1b[${this.cursorPos}D`);
         }
+        this.emitData('\x1b[K');
         this.currentLine = incomingCmd;
         this.cursorPos = incomingCmd.length;
         this.emitData(incomingCmd);
       }
 
+      // Clear any ghost text that might be sitting after the typed text
+      this.emitData('\x1b[K\r\n');
+
       const command = this.currentLine.trim();
-      this.emitData('\r\n');
 
       if (command) {
         this.history.push(command);
@@ -293,6 +422,7 @@ class TerminalService {
 
       this.currentLine = '';
       this.cursorPos = 0;
+      this.currentGhostSuggestion = '';
       this.emitSuggestions('');
       return;
     }
@@ -300,18 +430,12 @@ class TerminalService {
     // 2. Backspace key (\x7f or \x08)
     if (data === '\x7f' || data === '\x08') {
       if (this.cursorPos > 0) {
+        const oldPos = this.cursorPos;
         const before = this.currentLine.slice(0, this.cursorPos - 1);
         const after = this.currentLine.slice(this.cursorPos);
         this.currentLine = before + after;
         this.cursorPos--;
-
-        // Redraw remainder of line and position cursor back
-        let redraw = '\b' + after + ' ';
-        for (let i = 0; i <= after.length; i++) {
-          redraw += '\b';
-        }
-        this.emitData(redraw);
-        this.emitSuggestions(this.currentLine);
+        this.renderLine(oldPos);
       }
       return;
     }
@@ -319,53 +443,93 @@ class TerminalService {
     // 3. Delete key (\x1b[3~)
     if (data === '\x1b[3~') {
       if (this.cursorPos < this.currentLine.length) {
+        const oldPos = this.cursorPos;
         const before = this.currentLine.slice(0, this.cursorPos);
         const after = this.currentLine.slice(this.cursorPos + 1);
         this.currentLine = before + after;
-
-        let redraw = after + ' ';
-        for (let i = 0; i <= after.length; i++) {
-          redraw += '\b';
-        }
-        this.emitData(redraw);
-        this.emitSuggestions(this.currentLine);
+        this.renderLine(oldPos);
       }
       return;
     }
 
     // 4. Ctrl+C (\x03)
     if (data === '\x03') {
+      this.emitData('\x1b[K^C' + this.getPrompt(true));
       this.currentLine = '';
       this.cursorPos = 0;
+      this.currentGhostSuggestion = '';
       this.historyIndex = this.history.length;
-      this.emitData('^C' + this.getPrompt(true));
       this.emitSuggestions('');
       return;
     }
 
     // 5. Ctrl+L (\x0c) -> Clear screen
     if (data === '\x0c') {
-      this.emitData(`\x1b[2J\x1b[H${this.getPrompt(false)}${this.currentLine}`);
+      this.emitData(`\x1b[2J\x1b[3J\x1b[H${this.getPrompt(false)}`);
+      this.renderLine(0);
+      return;
+    }
+
+    // 5b. Ctrl+U (\x15) -> Clear line from cursor to start
+    if (data === '\x15') {
+      if (this.cursorPos > 0) {
+        const oldPos = this.cursorPos;
+        this.currentLine = this.currentLine.slice(this.cursorPos);
+        this.cursorPos = 0;
+        this.renderLine(oldPos);
+      }
+      return;
+    }
+
+    // 5c. Ctrl+K (\x0b) -> Clear line from cursor to end
+    if (data === '\x0b') {
+      const oldPos = this.cursorPos;
+      this.currentLine = this.currentLine.slice(0, this.cursorPos);
+      this.renderLine(oldPos);
+      return;
+    }
+
+    // 5d. Ctrl+W (\x17) -> Delete previous word
+    if (data === '\x17') {
+      if (this.cursorPos > 0) {
+        const oldPos = this.cursorPos;
+        const before = this.currentLine.slice(0, this.cursorPos);
+        const match = before.match(/(\s*\S+|\s+)$/);
+        const delLen = match ? match[0].length : 1;
+        const newBefore = before.slice(0, before.length - delLen);
+        const after = this.currentLine.slice(this.cursorPos);
+        this.currentLine = newBefore + after;
+        this.cursorPos -= delLen;
+        this.renderLine(oldPos);
+      }
       return;
     }
 
     // 6. Up Arrow (\x1b[A) -> Previous history
     if (data === '\x1b[A') {
       if (this.history.length > 0 && this.historyIndex > 0) {
+        const oldPos = this.cursorPos;
         this.historyIndex--;
-        this.replaceCurrentLine(this.history[this.historyIndex]);
+        this.currentLine = this.history[this.historyIndex];
+        this.cursorPos = this.currentLine.length;
+        this.renderLine(oldPos);
       }
       return;
     }
 
     // 7. Down Arrow (\x1b[B) -> Next history
     if (data === '\x1b[B') {
+      const oldPos = this.cursorPos;
       if (this.historyIndex < this.history.length - 1) {
         this.historyIndex++;
-        this.replaceCurrentLine(this.history[this.historyIndex]);
+        this.currentLine = this.history[this.historyIndex];
+        this.cursorPos = this.currentLine.length;
+        this.renderLine(oldPos);
       } else if (this.historyIndex === this.history.length - 1) {
         this.historyIndex = this.history.length;
-        this.replaceCurrentLine('');
+        this.currentLine = '';
+        this.cursorPos = 0;
+        this.renderLine(oldPos);
       }
       return;
     }
@@ -373,25 +537,27 @@ class TerminalService {
     // 8. Left Arrow (\x1b[D)
     if (data === '\x1b[D') {
       if (this.cursorPos > 0) {
+        const oldPos = this.cursorPos;
         this.cursorPos--;
-        this.emitData('\x1b[D');
+        this.renderLine(oldPos);
       }
       return;
     }
 
-    // 9. Right Arrow (\x1b[C) -> Autosuggestion completion if at end of line
+    // 9. Right Arrow (\x1b[C) -> Accept ghost suggestion if at end, else move cursor right
     if (data === '\x1b[C') {
-      if (this.cursorPos === this.currentLine.length && this.currentLine.trim()) {
-        const match = GIT_COMMANDS.find(item => item.cmd.startsWith(this.currentLine.trim()));
-        if (match && match.cmd !== this.currentLine) {
-          this.replaceCurrentLine(match.cmd);
-          return;
-        }
+      if (this.cursorPos === this.currentLine.length && this.currentGhostSuggestion && this.currentGhostSuggestion !== this.currentLine) {
+        const oldPos = this.cursorPos;
+        this.currentLine = this.currentGhostSuggestion;
+        this.cursorPos = this.currentLine.length;
+        this.renderLine(oldPos);
+        return;
       }
 
       if (this.cursorPos < this.currentLine.length) {
+        const oldPos = this.cursorPos;
         this.cursorPos++;
-        this.emitData('\x1b[C');
+        this.renderLine(oldPos);
       }
       return;
     }
@@ -399,65 +565,57 @@ class TerminalService {
     // 10. Home key (\x1b[H or \x1b[1~)
     if (data === '\x1b[H' || data === '\x1b[1~') {
       if (this.cursorPos > 0) {
-        this.emitData(`\x1b[${this.cursorPos}D`);
+        const oldPos = this.cursorPos;
         this.cursorPos = 0;
+        this.renderLine(oldPos);
       }
       return;
     }
 
     // 11. End key (\x1b[F or \x1b[4~)
     if (data === '\x1b[F' || data === '\x1b[4~') {
-      const diff = this.currentLine.length - this.cursorPos;
-      if (diff > 0) {
-        this.emitData(`\x1b[${diff}C`);
+      if (this.cursorPos < this.currentLine.length) {
+        const oldPos = this.cursorPos;
         this.cursorPos = this.currentLine.length;
+        this.renderLine(oldPos);
       }
       return;
     }
 
-    // 12. Tab completion (\t)
+    // 12. Tab completion (\t) -> Accept ghost suggestion immediately!
     if (data === '\t') {
+      if (this.currentGhostSuggestion && this.currentGhostSuggestion !== this.currentLine) {
+        const oldPos = this.cursorPos;
+        this.currentLine = this.currentGhostSuggestion;
+        this.cursorPos = this.currentLine.length;
+        this.renderLine(oldPos);
+        return;
+      }
+
+      // If no inline ghost, try explicit tab completion
       this.handleTabCompletion();
       return;
     }
 
     // 13. Regular printable characters or pasted string
     if (data.length >= 1 && !data.startsWith('\x1b')) {
-      // Filter out non-printable control chars except spaces
       const cleanData = data.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
       if (cleanData.length > 0) {
+        const oldPos = this.cursorPos;
         const before = this.currentLine.slice(0, this.cursorPos);
         const after = this.currentLine.slice(this.cursorPos);
         this.currentLine = before + cleanData + after;
         this.cursorPos += cleanData.length;
-
-        if (after.length === 0) {
-          this.emitData(cleanData);
-        } else {
-          let redraw = cleanData + after;
-          for (let i = 0; i < after.length; i++) {
-            redraw += '\b';
-          }
-          this.emitData(redraw);
-        }
-
-        this.emitSuggestions(this.currentLine);
+        this.renderLine(oldPos);
       }
     }
   }
 
   replaceCurrentLine(newLine) {
-    // Move cursor back to beginning of line
-    let clearStr = '';
-    if (this.cursorPos > 0) {
-      clearStr += `\x1b[${this.cursorPos}D`;
-    }
-    // Clear to end of line
-    clearStr += '\x1b[K';
+    const oldPos = this.cursorPos;
     this.currentLine = newLine;
     this.cursorPos = newLine.length;
-    this.emitData(clearStr + newLine);
-    this.emitSuggestions(this.currentLine);
+    this.renderLine(oldPos);
   }
 
   handleTabCompletion() {

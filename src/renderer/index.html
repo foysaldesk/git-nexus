@@ -523,17 +523,36 @@
           <button class="cmd-chip ubuntu-chip" data-cmd="git stash" title="Save uncommitted changes">git stash</button>
         </div>
 
-        <div class="terminal-header-actions" style="display: flex; gap: 10px; align-items: center;">
-          <button id="btn-terminal-clear" class="btn btn-icon ubuntu-action-btn" title="Clear Terminal (Ctrl+L)" style="padding: 2px 6px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <div class="terminal-header-actions" style="display: flex; gap: 8px; align-items: center;">
+          <button id="btn-terminal-clear" class="btn btn-icon ubuntu-action-btn" title="Clear Terminal (Ctrl+L)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
             </svg>
           </button>
           <div class="ubuntu-window-controls">
-            <button class="ubuntu-btn ubuntu-btn-min" id="btn-terminal-minimize" title="Minimize Terminal"></button>
-            <button class="ubuntu-btn ubuntu-btn-max" id="btn-terminal-size" title="Maximize/Restore Terminal"></button>
-            <button class="ubuntu-btn ubuntu-btn-close" id="btn-terminal-close" title="Close Terminal"></button>
+            <button class="ubuntu-btn ubuntu-btn-min" id="btn-terminal-minimize" title="Minimize Terminal">
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round">
+                <line x1="4" y1="12" x2="20" y2="12"></line>
+              </svg>
+            </button>
+            <button class="ubuntu-btn ubuntu-btn-max" id="btn-terminal-size" title="Maximize/Restore Terminal">
+              <svg class="icon-maximize" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              </svg>
+              <svg class="icon-restore" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                <rect x="8" y="4" width="12" height="12" rx="1.5"></rect>
+                <path d="M4 8v12h12"></path>
+              </svg>
+            </button>
+            <button class="ubuntu-btn ubuntu-btn-close" id="btn-terminal-close" title="Close Terminal">
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+                <line x1="6" y1="18" x2="18" y2="6"></line>
+              </svg>
+            </button>
           </div>
         </div>
       </div>
