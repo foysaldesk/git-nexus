@@ -41,39 +41,25 @@ const GIT_COMMANDS = [
   { cmd: 'git show HEAD', desc: 'Show details of latest commit' }
 ];
 
-class TerminalService {
-  constructor() {
-    this.currentCwd = process.cwd();
-    this.sender = null;
+class TerminalSession {
+  constructor(id, cwd, service) {
+    this.id = id;
+    this.currentCwd = cwd || process.cwd();
+    this.service = service;
     this.activeChild = null;
     this.history = [];
     this.historyIndex = -1;
     this.currentLine = '';
     this.cursorPos = 0;
-  }
-
-  init(windowOrWebContents) {
-    if (!windowOrWebContents) return;
-    if (windowOrWebContents.webContents) {
-      this.sender = windowOrWebContents.webContents;
-    } else {
-      this.sender = windowOrWebContents;
-    }
+    this.currentGhostSuggestion = '';
   }
 
   emitData(data) {
-    if (!this.sender) return;
-    try {
-      if (!this.sender.isDestroyed()) {
-        if (typeof this.sender.send === 'function') {
-          this.sender.send('terminal:data', data);
-        } else if (this.sender.webContents && typeof this.sender.webContents.send === 'function') {
-          this.sender.webContents.send('terminal:data', data);
-        }
-      }
-    } catch (e) {
-      console.error('Failed to emit terminal data:', e);
-    }
+    this.service.emitData(data, this.id);
+  }
+
+  emitSuggestions(suggestions) {
+    this.service.emitSuggestions(suggestions, this.id);
   }
 
   getCleanPath() {
@@ -237,7 +223,7 @@ class TerminalService {
 
   renderLine(oldCursorPos = this.cursorPos) {
     let output = '';
-    // Move cursor back to beginning of line (at prompt)
+    // Move cursor back to beginning of line
     if (oldCursorPos > 0) {
       output += `\x1b[${oldCursorPos}D`;
     }
@@ -254,7 +240,6 @@ class TerminalService {
 
     if (ghostFull && ghostFull.startsWith(this.currentLine) && ghostFull.length > this.currentLine.length) {
       ghostSuffix = ghostFull.slice(this.currentLine.length);
-      // Render ghost text in muted gray (ANSI \x1b[90m)
       output += `\x1b[90m${ghostSuffix}\x1b[0m`;
     }
 
@@ -268,65 +253,7 @@ class TerminalService {
     this.emitSuggestions(this.currentLine);
   }
 
-  emitSuggestions(inputLine = '') {
-    const trimmed = inputLine.trim();
-    let suggestions = [];
-
-    if (!trimmed || trimmed === 'g' || trimmed === 'gi' || trimmed === 'git') {
-      suggestions = [
-        { cmd: 'git status', label: 'git status', desc: 'Working tree status' },
-        { cmd: 'git log --oneline -n 10', label: 'git log', desc: 'Recent commits' },
-        { cmd: 'git branch -a', label: 'git branch', desc: 'List branches' },
-        { cmd: 'git diff', label: 'git diff', desc: 'Inspect changes' },
-        { cmd: 'git add .', label: 'git add .', desc: 'Stage all files' },
-        { cmd: 'git commit -m ""', label: 'git commit', desc: 'Commit staged' },
-        { cmd: 'git push origin', label: 'git push', desc: 'Push to remote' },
-        { cmd: 'git pull origin', label: 'git pull', desc: 'Pull changes' },
-        { cmd: 'git stash', label: 'git stash', desc: 'Save uncommitted work' }
-      ];
-    } else {
-      const lower = trimmed.toLowerCase();
-      
-      // 1. Match from standard GIT_COMMANDS
-      const cmdMatches = GIT_COMMANDS.filter(item => 
-        item.cmd.toLowerCase().startsWith(lower) || item.cmd.toLowerCase().includes(lower)
-      ).map(item => ({ cmd: item.cmd, label: item.cmd, desc: item.desc }));
-
-      // 2. Branch contextual suggestions for branch operations
-      const branchMatches = [];
-      const branchKeywords = ['checkout', 'switch', 'merge', 'rebase', 'pull', 'push', 'branch'];
-      if (branchKeywords.some(kw => lower.includes(kw))) {
-        const branches = this.getRepoBranches();
-        const parts = trimmed.split(/\s+/);
-        const lastToken = parts.length > 2 ? parts[parts.length - 1] : '';
-        const matchingBranches = branches.filter(b => !lastToken || b.toLowerCase().startsWith(lastToken.toLowerCase()));
-        
-        for (const b of matchingBranches.slice(0, 5)) {
-          let fullCmd = parts.join(' ');
-          if (lastToken) {
-            fullCmd = parts.slice(0, -1).join(' ') + ' ' + b;
-          } else {
-            fullCmd = trimmed + (trimmed.endsWith(' ') ? '' : ' ') + b;
-          }
-          branchMatches.push({ cmd: fullCmd.trim(), label: b, desc: `Branch: ${b}` });
-        }
-      }
-
-      suggestions = [...cmdMatches, ...branchMatches].slice(0, 10);
-    }
-
-    if (this.sender && !this.sender.isDestroyed()) {
-      try {
-        if (typeof this.sender.send === 'function') {
-          this.sender.send('terminal:suggestions', suggestions);
-        } else if (this.sender.webContents && typeof this.sender.webContents.send === 'function') {
-          this.sender.webContents.send('terminal:suggestions', suggestions);
-        }
-      } catch (e) { /* ignore */ }
-    }
-  }
-
-  startSession(cwd = process.cwd()) {
+  startSession(cwd = this.currentCwd) {
     this.killSession();
     this.currentCwd = cwd;
     this.currentLine = '';
@@ -334,11 +261,11 @@ class TerminalService {
     this.currentGhostSuggestion = '';
     this.historyIndex = this.history.length;
 
-    // Clear previous screen to avoid duplicated prompt lines
+    // Clear previous screen and print prompt
     this.emitData(`\x1b[2J\x1b[3J\x1b[H${this.getPrompt(false)}`);
     this.emitSuggestions('');
 
-    return { success: true, cwd: this.currentCwd };
+    return { success: true, cwd: this.currentCwd, tabId: this.id };
   }
 
   clearSession() {
@@ -349,7 +276,7 @@ class TerminalService {
     this.historyIndex = this.history.length;
     this.emitData(`\x1b[2J\x1b[3J\x1b[H${this.getPrompt(false)}`);
     this.emitSuggestions('');
-    return { success: true };
+    return { success: true, tabId: this.id };
   }
 
   write(data) {
@@ -406,7 +333,7 @@ class TerminalService {
         this.emitData(incomingCmd);
       }
 
-      // Clear any ghost text that might be sitting after the typed text
+      // Clear any ghost text sitting after typed text
       this.emitData('\x1b[K\r\n');
 
       const command = this.currentLine.trim();
@@ -418,22 +345,20 @@ class TerminalService {
         this.executeCommand(command);
       } else {
         this.emitData(this.getPrompt(false));
+        this.emitSuggestions('');
       }
 
       this.currentLine = '';
       this.cursorPos = 0;
       this.currentGhostSuggestion = '';
-      this.emitSuggestions('');
       return;
     }
 
-    // 2. Backspace key (\x7f or \x08)
+    // 2. Backspace (\x7f or \x08)
     if (data === '\x7f' || data === '\x08') {
       if (this.cursorPos > 0) {
         const oldPos = this.cursorPos;
-        const before = this.currentLine.slice(0, this.cursorPos - 1);
-        const after = this.currentLine.slice(this.cursorPos);
-        this.currentLine = before + after;
+        this.currentLine = this.currentLine.slice(0, this.cursorPos - 1) + this.currentLine.slice(this.cursorPos);
         this.cursorPos--;
         this.renderLine(oldPos);
       }
@@ -444,26 +369,23 @@ class TerminalService {
     if (data === '\x1b[3~') {
       if (this.cursorPos < this.currentLine.length) {
         const oldPos = this.cursorPos;
-        const before = this.currentLine.slice(0, this.cursorPos);
-        const after = this.currentLine.slice(this.cursorPos + 1);
-        this.currentLine = before + after;
+        this.currentLine = this.currentLine.slice(0, this.cursorPos) + this.currentLine.slice(this.cursorPos + 1);
         this.renderLine(oldPos);
       }
       return;
     }
 
-    // 4. Ctrl+C (\x03)
+    // 4. Ctrl+C (\x03) -> Cancel current prompt line
     if (data === '\x03') {
-      this.emitData('\x1b[K^C' + this.getPrompt(true));
       this.currentLine = '';
       this.cursorPos = 0;
       this.currentGhostSuggestion = '';
-      this.historyIndex = this.history.length;
+      this.emitData('^C' + this.getPrompt(true));
       this.emitSuggestions('');
       return;
     }
 
-    // 5. Ctrl+L (\x0c) -> Clear screen
+    // 5. Ctrl+L (\x0c) -> Clear Screen
     if (data === '\x0c') {
       this.emitData(`\x1b[2J\x1b[3J\x1b[H${this.getPrompt(false)}`);
       this.renderLine(0);
@@ -544,7 +466,7 @@ class TerminalService {
       return;
     }
 
-    // 9. Right Arrow (\x1b[C) -> Accept ghost suggestion if at end, else move cursor right
+    // 9. Right Arrow (\x1b[C) -> Accept ghost suggestion if at end
     if (data === '\x1b[C') {
       if (this.cursorPos === this.currentLine.length && this.currentGhostSuggestion && this.currentGhostSuggestion !== this.currentLine) {
         const oldPos = this.cursorPos;
@@ -582,7 +504,7 @@ class TerminalService {
       return;
     }
 
-    // 12. Tab completion (\t) -> Accept ghost suggestion immediately!
+    // 12. Tab completion (\t)
     if (data === '\t') {
       if (this.currentGhostSuggestion && this.currentGhostSuggestion !== this.currentLine) {
         const oldPos = this.cursorPos;
@@ -592,7 +514,6 @@ class TerminalService {
         return;
       }
 
-      // If no inline ghost, try explicit tab completion
       this.handleTabCompletion();
       return;
     }
@@ -621,7 +542,6 @@ class TerminalService {
   handleTabCompletion() {
     const current = this.currentLine.trim();
     if (!current) {
-      // Show top git suggestions
       this.emitData(`\r\n\x1b[1;36mGit Suggestions:\x1b[0m status, log, branch, checkout, commit, diff, push, pull, stash\r\n`);
       this.emitData(this.getPrompt(false) + this.currentLine);
       return;
@@ -676,9 +596,7 @@ class TerminalService {
         this.emitData(`\r\n\x1b[1;32mFiles:\x1b[0m ${matches.join('   ')}\r\n`);
         this.emitData(this.getPrompt(false) + this.currentLine);
       }
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) { /* ignore */ }
   }
 
   executeCommand(cmd) {
@@ -688,13 +606,11 @@ class TerminalService {
     if (/^cd(\s+.*)?$/i.test(trimmed)) {
       let target = trimmed.slice(2).trim();
       if (!target) {
-        // print current directory
         this.emitData(`${this.currentCwd}\r\n${this.getPrompt(false)}`);
         this.emitSuggestions('');
         return;
       }
 
-      // Strip Windows /d flag and quotes
       target = target.replace(/^\/d\s+/i, '').replace(/^["']|["']$/g, '');
       const newPath = path.resolve(this.currentCwd, target);
 
@@ -747,7 +663,6 @@ class TerminalService {
       });
 
       this.activeChild.stdout.on('data', (d) => {
-        // Ensure \n without \r is converted to \r\n for xterm cursor positioning
         const formatted = d.toString().replace(/\r?\n/g, '\r\n');
         this.emitData(formatted);
       });
@@ -783,12 +698,6 @@ class TerminalService {
     }
   }
 
-  setCwd(newCwd) {
-    if (newCwd && fs.existsSync(newCwd)) {
-      this.startSession(newCwd);
-    }
-  }
-
   killSession() {
     if (this.activeChild) {
       try {
@@ -801,6 +710,258 @@ class TerminalService {
         try { this.activeChild.kill(); } catch (err) { /* ignore */ }
       }
       this.activeChild = null;
+    }
+  }
+}
+
+class TerminalService {
+  constructor() {
+    this.defaultCwd = process.cwd();
+    this.senders = new Set();
+    this.sessions = new Map(); // tabId -> TerminalSession
+  }
+
+  init(windowOrWebContents) {
+    if (!windowOrWebContents) return;
+    try {
+      let wc = null;
+      try {
+        wc = windowOrWebContents.webContents || windowOrWebContents;
+      } catch (e) {
+        return;
+      }
+      if (wc && !wc.isDestroyed() && typeof wc.send === 'function') {
+        this.senders.add(wc);
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  removeSender(windowOrWebContents) {
+    if (!windowOrWebContents) return;
+    try {
+      let wc = null;
+      try {
+        wc = windowOrWebContents.webContents || windowOrWebContents;
+      } catch (e) { /* window might already be destroyed */ }
+      if (wc) {
+        this.senders.delete(wc);
+      }
+    } catch (e) { /* ignore */ }
+    this.cleanSenders();
+  }
+
+  cleanSenders() {
+    for (const sender of Array.from(this.senders)) {
+      try {
+        if (!sender || sender.isDestroyed()) {
+          this.senders.delete(sender);
+        }
+      } catch (e) {
+        this.senders.delete(sender);
+      }
+    }
+  }
+
+  emitData(data, tabId = 'tab-1') {
+    for (const sender of Array.from(this.senders)) {
+      try {
+        if (sender && !sender.isDestroyed() && typeof sender.send === 'function') {
+          sender.send('terminal:data', { data, tabId });
+        } else {
+          this.senders.delete(sender);
+        }
+      } catch (e) {
+        this.senders.delete(sender);
+      }
+    }
+  }
+
+  emitSuggestions(suggestions, tabId = 'tab-1') {
+    for (const sender of Array.from(this.senders)) {
+      try {
+        if (sender && !sender.isDestroyed() && typeof sender.send === 'function') {
+          sender.send('terminal:suggestions', { suggestions, tabId });
+        } else {
+          this.senders.delete(sender);
+        }
+      } catch (e) {
+        this.senders.delete(sender);
+      }
+    }
+  }
+
+  getSession(tabId = 'tab-1', createIfMissing = true, initialCwd = null) {
+    if (this.sessions.has(tabId)) {
+      return this.sessions.get(tabId);
+    }
+    if (createIfMissing) {
+      const cwd = initialCwd || this.defaultCwd || process.cwd();
+      const session = new TerminalSession(tabId, cwd, this);
+      this.sessions.set(tabId, session);
+      return session;
+    }
+    return null;
+  }
+
+  startSession(cwd = this.defaultCwd, tabId = 'tab-1') {
+    if (cwd) this.defaultCwd = cwd;
+    let session = this.sessions.get(tabId);
+    if (!session) {
+      session = new TerminalSession(tabId, cwd || this.defaultCwd, this);
+      this.sessions.set(tabId, session);
+    }
+    return session.startSession(cwd || this.defaultCwd);
+  }
+
+  clearSession(tabId = 'tab-1') {
+    const session = this.getSession(tabId, false);
+    if (session) {
+      return session.clearSession();
+    }
+    return { success: true, tabId };
+  }
+
+  closeTab(tabId) {
+    if (tabId && this.sessions.has(tabId)) {
+      const session = this.sessions.get(tabId);
+      session.killSession();
+      this.sessions.delete(tabId);
+      return { success: true, tabId };
+    }
+    return { success: false, error: 'Tab not found' };
+  }
+
+  write(data, tabId = 'tab-1') {
+    const session = this.getSession(tabId, true);
+    session.write(data);
+  }
+
+  setCwd(newCwd, tabId = null) {
+    if (newCwd && fs.existsSync(newCwd)) {
+      this.defaultCwd = newCwd;
+      if (tabId) {
+        const session = this.getSession(tabId, true, newCwd);
+        session.startSession(newCwd);
+      } else {
+        // If tabId is not specified, update tab-1 or start it
+        const session = this.getSession('tab-1', true, newCwd);
+        session.startSession(newCwd);
+      }
+    }
+  }
+
+  openSystemTerminal(cwd = this.defaultCwd, terminalType = 'default') {
+    const targetCwd = cwd || this.defaultCwd || process.cwd();
+    const platform = process.platform;
+
+    if (platform === 'win32') {
+      if (terminalType === 'git-bash' || terminalType === 'default') {
+        const gitBashCandidates = [
+          path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Git', 'git-bash.exe'),
+          path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Git', 'git-bash.exe'),
+          path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Git', 'git-bash.exe'),
+          path.join(process.env.ProgramW6432 || 'C:\\Program Files', 'Git', 'git-bash.exe')
+        ];
+
+        let foundPath = null;
+        for (const p of gitBashCandidates) {
+          if (fs.existsSync(p)) {
+            foundPath = p;
+            break;
+          }
+        }
+
+        if (!foundPath && terminalType === 'git-bash') {
+          foundPath = 'git-bash.exe';
+        }
+
+        if (foundPath) {
+          try {
+            const child = spawn(foundPath, [`--cd=${targetCwd}`], {
+              detached: true,
+              stdio: 'ignore',
+              windowsHide: false
+            });
+            child.unref();
+            return { success: true, terminal: 'git-bash' };
+          } catch (e) {
+            if (terminalType === 'git-bash') {
+              return { success: false, error: `Could not launch Git Bash: ${e.message}` };
+            }
+          }
+        }
+      }
+
+      if (terminalType === 'wt') {
+        try {
+          const child = spawn('wt.exe', ['-d', targetCwd], {
+            detached: true,
+            stdio: 'ignore',
+            windowsHide: false
+          });
+          child.unref();
+          return { success: true, terminal: 'wt' };
+        } catch (e) {
+          if (terminalType === 'wt') {
+            return { success: false, error: `Could not launch Windows Terminal: ${e.message}` };
+          }
+        }
+      }
+
+      if (terminalType === 'powershell' || terminalType === 'default') {
+        try {
+          const child = spawn('powershell.exe', ['-NoExit', '-Command', `Set-Location -LiteralPath '${targetCwd}'`], {
+            detached: true,
+            stdio: 'ignore',
+            windowsHide: false
+          });
+          child.unref();
+          return { success: true, terminal: 'powershell' };
+        } catch (e) {
+          // fallback to cmd
+        }
+      }
+
+      try {
+        const child = spawn('cmd.exe', ['/k', `cd /d "${targetCwd}"`], {
+          detached: true,
+          stdio: 'ignore',
+          windowsHide: false
+        });
+        child.unref();
+        return { success: true, terminal: 'cmd' };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    } else if (platform === 'darwin') {
+      try {
+        const child = spawn('open', ['-a', 'Terminal', targetCwd], {
+          detached: true,
+          stdio: 'ignore'
+        });
+        child.unref();
+        return { success: true, terminal: 'Terminal.app' };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+    } else {
+      const terminals = ['x-terminal-emulator', 'gnome-terminal', 'konsole', 'xfce4-terminal', 'xterm'];
+      for (const t of terminals) {
+        try {
+          const child = spawn(t, { cwd: targetCwd, detached: true, stdio: 'ignore' });
+          child.unref();
+          return { success: true, terminal: t };
+        } catch (e) {
+          // try next
+        }
+      }
+      return { success: false, error: 'No suitable terminal found' };
+    }
+  }
+
+  killSession() {
+    for (const session of this.sessions.values()) {
+      session.killSession();
     }
   }
 }

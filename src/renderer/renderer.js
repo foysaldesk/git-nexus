@@ -135,13 +135,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnFhViewFull = document.getElementById('btn-fh-view-full');
   const fhDiffContainer = document.getElementById('fh-diff-container');
 
-  // Terminal Elements
-  const terminalDrawer = document.getElementById('terminal-drawer');
-  const terminalCwdLabel = document.getElementById('terminal-cwd-label');
-  const btnTerminalClear = document.getElementById('btn-terminal-clear');
-  const btnTerminalSize = document.getElementById('btn-terminal-size');
-  const btnTerminalClose = document.getElementById('btn-terminal-close');
-
   const btnWelcomeOpen = document.getElementById('btn-welcome-open');
   const btnWelcomeInit = document.getElementById('btn-welcome-init');
 
@@ -171,10 +164,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const chkPushForce = document.getElementById('chk-push-force');
   const btnConfirmPush = document.getElementById('btn-confirm-push');
 
-  // Initialize Terminal
-  const termManager = new TerminalManager('terminal-container');
-  termManager.init();
-
   // Theme Manager (Dark, Light, System)
   const selectTheme = document.getElementById('select-theme');
   const savedTheme = localStorage.getItem('gitnexus_theme') || 'dark';
@@ -191,7 +180,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.documentElement.setAttribute('data-theme', effectiveTheme);
     localStorage.setItem('gitnexus_theme', themeMode);
-    termManager.setTheme(effectiveTheme);
   }
 
   if (selectTheme) {
@@ -442,7 +430,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     activeRepoPill.title = repoPath;
 
     // Update Terminal CWD
-    terminalCwdLabel.textContent = `~/${folderName}`;
     await window.api.setTerminalCwd(repoPath);
 
     // Populate Datalist for File Search
@@ -2923,142 +2910,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Terminal Drawer Toggle & Controls
-  function toggleTerminal() {
-    const isCollapsed = terminalDrawer.classList.contains('collapsed');
-    if (isCollapsed) {
-      terminalDrawer.classList.remove('collapsed');
-      termManager.fit();
-      termManager.focus();
-      setTimeout(() => {
-        termManager.fit();
-        termManager.focus();
-      }, 100);
-      setTimeout(() => {
-        termManager.fit();
-        termManager.focus();
-      }, 250);
-    } else {
-      terminalDrawer.classList.add('collapsed');
-    }
+  // Open External Standalone Terminal Window
+  function openExternalTerminal() {
+    window.api.openTerminalWindow(state.currentRepoPath);
   }
 
-  btnToggleTerminal.addEventListener('click', toggleTerminal);
-  btnTerminalClose.addEventListener('click', () => terminalDrawer.classList.add('collapsed'));
-  const btnTerminalMin = document.getElementById('btn-terminal-minimize');
-  if (btnTerminalMin) {
-    btnTerminalMin.addEventListener('click', () => terminalDrawer.classList.add('collapsed'));
+  if (btnToggleTerminal) {
+    btnToggleTerminal.addEventListener('click', openExternalTerminal);
   }
-
-  function updateTerminalMaxIcon(isMax) {
-    if (!btnTerminalSize) return;
-    const iconMax = btnTerminalSize.querySelector('.icon-maximize');
-    const iconRestore = btnTerminalSize.querySelector('.icon-restore');
-    if (iconMax && iconRestore) {
-      iconMax.style.display = isMax ? 'none' : 'block';
-      iconRestore.style.display = isMax ? 'block' : 'none';
-    }
-    btnTerminalSize.title = isMax ? 'Restore Terminal' : 'Maximize Terminal';
-  }
-
-  btnTerminalSize.addEventListener('click', () => {
-    terminalDrawer.style.height = ''; // clear custom inline height
-    const isMax = terminalDrawer.classList.toggle('maximized');
-    updateTerminalMaxIcon(isMax);
-    setTimeout(() => termManager.fit(), 220);
-  });
-
-  btnTerminalClear.addEventListener('click', () => {
-    termManager.clear();
-  });
-
-  // Terminal Mouse Resizing
-  const terminalResizeHandle = document.getElementById('terminal-resize-handle');
-  let isResizingTerminal = false;
-  let termStartY = 0;
-  let termStartHeight = 0;
-
-  if (terminalResizeHandle) {
-    terminalResizeHandle.addEventListener('mousedown', (e) => {
-      if (terminalDrawer.classList.contains('collapsed')) return;
-      isResizingTerminal = true;
-      termStartY = e.clientY;
-      termStartHeight = terminalDrawer.getBoundingClientRect().height;
-      terminalDrawer.classList.remove('maximized');
-      updateTerminalMaxIcon(false);
-      terminalDrawer.classList.add('resizing');
-      terminalResizeHandle.classList.add('dragging');
-      document.body.style.cursor = 'ns-resize';
-      document.body.style.userSelect = 'none';
-      e.preventDefault();
-    });
-
-    window.addEventListener('mousemove', (e) => {
-      if (!isResizingTerminal) return;
-      const deltaY = termStartY - e.clientY;
-      const minH = 100;
-      const maxH = Math.floor(window.innerHeight * 0.85);
-      const newHeight = Math.max(minH, Math.min(maxH, termStartHeight + deltaY));
-      terminalDrawer.style.height = `${newHeight}px`;
-      termManager.fit();
-    });
-
-    window.addEventListener('mouseup', () => {
-      if (isResizingTerminal) {
-        isResizingTerminal = false;
-        terminalDrawer.classList.remove('resizing');
-        terminalResizeHandle.classList.remove('dragging');
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-        setTimeout(() => termManager.fit(), 50);
-      }
-    });
-  }
-
-  // Real-time Git Command Suggestions Stream
-  const terminalSuggestionsBar = document.getElementById('terminal-suggestions-bar');
-  if (window.api.onTerminalSuggestions && terminalSuggestionsBar) {
-    window.api.onTerminalSuggestions((suggestions) => {
-      if (!Array.isArray(suggestions) || suggestions.length === 0) return;
-      terminalSuggestionsBar.innerHTML = '';
-      suggestions.forEach(item => {
-        const chip = document.createElement('button');
-        chip.className = 'cmd-chip ubuntu-chip';
-        chip.setAttribute('data-cmd', item.cmd);
-        chip.title = item.desc || item.cmd;
-        chip.textContent = item.label || item.cmd;
-        chip.addEventListener('click', () => {
-          if (terminalDrawer.classList.contains('collapsed')) {
-            terminalDrawer.classList.remove('collapsed');
-          }
-          termManager.fit();
-          termManager.focus();
-          setTimeout(() => {
-            termManager.fit();
-            termManager.sendQuickCommand(item.cmd);
-            termManager.focus();
-          }, 80);
-        });
-        terminalSuggestionsBar.appendChild(chip);
-      });
-    });
-  }
-
-  document.querySelectorAll('.cmd-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const cmd = chip.getAttribute('data-cmd');
-      if (terminalDrawer.classList.contains('collapsed')) {
-        terminalDrawer.classList.remove('collapsed');
-      }
-      termManager.fit();
-      termManager.focus();
-      setTimeout(() => {
-        termManager.fit();
-        termManager.sendQuickCommand(cmd);
-        termManager.focus();
-      }, 80);
-    });
-  });
 
   // Browse Repo Dialog
   async function handleBrowseRepo() {
@@ -3098,7 +2957,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       refreshRepository();
     } else if ((e.ctrlKey || e.metaKey) && e.key === '`') {
       e.preventDefault();
-      toggleTerminal();
+      openExternalTerminal();
     } else if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
       e.preventDefault();
       handleBrowseRepo();

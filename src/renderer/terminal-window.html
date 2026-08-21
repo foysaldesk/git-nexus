@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Git Nexus - Terminal</title>
+  <link rel="icon" type="image/svg+xml" href="../../assets/terminal-icon.svg">
+  <link rel="icon" type="image/png" href="../../assets/terminal-icon.png">
+  <link rel="stylesheet" href="../../node_modules/@xterm/xterm/css/xterm.css">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: #300a24;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    #standalone-terminal-layout {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+      background-color: #300a24;
+    }
+
+    /* Top Control Bar */
+    .standalone-header {
+      height: 40px;
+      background: linear-gradient(180deg, #3d0c2e 0%, #29061e 100%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      gap: 8px;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .standalone-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .standalone-brand-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      background: linear-gradient(135deg, #e95420, #77216f);
+      border-radius: 5px;
+      color: #fff;
+      box-shadow: 0 0 8px rgba(233, 84, 32, 0.4);
+    }
+
+    .standalone-cwd-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #dfdbd2;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .standalone-header-chips {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      overflow-x: auto;
+      flex: 1;
+      padding: 0 4px;
+      scrollbar-width: none;
+    }
+    .standalone-header-chips::-webkit-scrollbar {
+      display: none;
+    }
+
+    .standalone-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .standalone-action-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #dfdbd2;
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.12s ease;
+    }
+
+    .standalone-action-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+    }
+
+    .standalone-action-btn.pinned {
+      background: rgba(233, 84, 32, 0.25);
+      border-color: #e95420;
+      color: #ffffff;
+      box-shadow: 0 0 6px rgba(233, 84, 32, 0.4);
+    }
+
+    /* Tab Bar */
+    .terminal-tab-bar {
+      background: #24061a;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3px 8px 0;
+      gap: 6px;
+      flex-shrink: 0;
+      user-select: none;
+      min-height: 31px;
+    }
+
+    .terminal-tabs-container {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      flex: 1;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .terminal-tabs-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .term-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.6);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: none;
+      border-radius: 5px 5px 0 0;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      max-width: 170px;
+      position: relative;
+    }
+
+    .term-tab:hover {
+      background: rgba(255, 255, 255, 0.09);
+      color: #fff;
+    }
+
+    .term-tab.active {
+      background: #300a24;
+      color: #ffffff;
+      border-color: rgba(233, 84, 32, 0.4);
+      border-top: 2px solid #e95420;
+      font-weight: 600;
+      box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .term-tab-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .term-tab-close {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.4);
+      cursor: pointer;
+      padding: 0;
+      font-size: 10px;
+      transition: all 0.12s ease;
+    }
+
+    .term-tab-close:hover {
+      background: rgba(233, 84, 32, 0.4);
+      color: #fff;
+    }
+
+    .btn-add-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 9px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.7);
+      background: transparent;
+      border: 1px dashed rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 2px;
+      transition: all 0.12s ease;
+      flex-shrink: 0;
+    }
+
+    .btn-add-tab:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border-color: #e95420;
+    }
+
+    .tab-shortcut-badge {
+      font-size: 9px;
+      opacity: 0.55;
+      padding: 1px 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      margin-left: 2px;
+    }
+
+    /* Dropdown Menus */
+    .system-term-dropdown {
+      position: relative;
+    }
+
+    .system-term-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 4px;
+      background: #25061b;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      z-index: 100;
+      min-width: 190px;
+      padding: 4px;
+    }
+
+    .system-term-menu.open {
+      display: block;
+    }
+
+    .system-term-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      font-size: 11.5px;
+      color: #dfdbd2;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .system-term-item:hover {
+      background: #380c2a;
+      color: #ffffff;
+    }
+
+    /* Terminal Viewports Container */
+    #standalone-terminal-container {
+      flex: 1;
+      position: relative;
+      background-color: #300a24;
+      overflow: hidden;
+      width: 100%;
+      height: calc(100vh - 71px);
+    }
+
+    .tab-viewport {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 4px 8px;
+      display: none;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+    }
+
+    .tab-viewport.active {
+      display: block;
+    }
+
+    .tab-viewport .xterm {
+      padding: 2px;
+      height: 100%;
+    }
+
+    .tab-viewport .xterm-viewport {
+      background-color: #300a24 !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="standalone-terminal-layout">
+    <!-- Top Action Bar -->
+    <div class="standalone-header">
+      <div class="standalone-header-left">
+        <div class="standalone-brand-logo" title="Git Nexus Terminal">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
+          </svg>
+        </div>
+        <div id="terminal-cwd-badge" class="standalone-cwd-pill" title="Current Repository">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span id="terminal-cwd-text">Terminal</span>
+        </div>
+      </div>
+
+      <!-- Quick Command Chips -->
+      <div id="standalone-chips-bar" class="standalone-header-chips">
+        <button class="cmd-chip ubuntu-chip" data-cmd="git status" title="Show working tree status">git status</button>
+        <button class="cmd-chip ubuntu-chip" data-cmd="git log --oneline -n 10" title="Compact commit history">git log</button>
+        <button class="cmd-chip ubuntu-chip" data-cmd="git branch -a" title="List all branches">git branch -a</button>
+        <button class="cmd-chip ubuntu-chip" data-cmd="git diff" title="Show working changes">git diff</button>
+        <button class="cmd-chip ubuntu-chip" data-cmd="git add ." title="Stage all changes">git add .</button>
+        <button class="cmd-chip ubuntu-chip" data-cmd="git commit -m &quot;&quot;" title="Commit staged changes">git commit</button>
+        <button class="cmd-chip ubuntu-chip" data-cmd="git push origin" title="Push to remote">git push</button>
+        <button class="cmd-chip ubuntu-chip" data-cmd="git pull origin" title="Pull from remote">git pull</button>
+        <button class="cmd-chip ubuntu-chip" data-cmd="git stash" title="Save uncommitted changes">git stash</button>
+      </div>
+
+      <!-- Window Actions -->
+      <div class="standalone-header-actions">
+        <!-- Clear Button -->
+        <button id="btn-standalone-clear" class="standalone-action-btn" title="Clear screen (Ctrl+L)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          <span>Clear</span>
+        </button>
+
+        <!-- Always on Top Toggle -->
+        <button id="btn-standalone-pin" class="standalone-action-btn" title="Pin window on top of other apps">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+          <span id="pin-text">Pin</span>
+        </button>
+
+        <!-- System External Terminal Menu -->
+        <div class="system-term-dropdown">
+          <button id="btn-standalone-system-term" class="standalone-action-btn" title="Open in external system terminal">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+            <span>External</span>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div id="standalone-system-menu" class="system-term-menu">
+            <button class="system-term-item" data-type="git-bash">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="6" y1="3" x2="6" y2="15"></line>
+                <circle cx="18" cy="6" r="3"></circle>
+                <circle cx="6" cy="18" r="3"></circle>
+                <path d="M18 9a9 9 0 0 1-9 9"></path>
+              </svg>
+              <span>Git Bash</span>
+            </button>
+            <button class="system-term-item" data-type="wt">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="4 17 10 11 4 5"></polyline>
+                <line x1="12" y1="19" x2="20" y2="19"></line>
+              </svg>
+              <span>Windows Terminal</span>
+            </button>
+            <button class="system-term-item" data-type="powershell">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="7 8 11 12 7 16"></polyline>
+                <line x1="13" y1="16" x2="17" y2="16"></line>
+              </svg>
+              <span>PowerShell</span>
+            </button>
+            <button class="system-term-item" data-type="cmd">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="4 17 10 11 4 5"></polyline>
+                <line x1="12" y1="19" x2="20" y2="19"></line>
+              </svg>
+              <span>Command Prompt (CMD)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Close Window Button -->
+        <button id="btn-standalone-close" class="standalone-action-btn" title="Close Terminal Window">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+          <span>Close</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Multi-Tab Strip Bar -->
+    <div class="terminal-tab-bar">
+      <div class="terminal-tabs-container" id="terminal-tabs-list">
+        <!-- Rendered dynamically -->
+      </div>
+      <button id="btn-add-tab" class="btn-add-tab" title="New Terminal Tab (Ctrl+Shift+T or Ctrl+T)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>New Tab</span>
+        <span class="tab-shortcut-badge">Ctrl+T</span>
+      </button>
+    </div>
+
+    <!-- Terminal Body Viewports Container -->
+    <div id="standalone-terminal-container"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../../node_modules/@xterm/xterm/lib/xterm.js"></script>
+  <script src="../../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+  <script src="terminal-window.js"></script>
+</body>
+</html>

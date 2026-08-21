@@ -42,18 +42,46 @@ contextBridge.exposeInMainWorld('api', {
   getAllRepoFiles: (repoPath) => ipcRenderer.invoke('git:getAllRepoFiles', repoPath),
 
   // Terminal Operations
-  startTerminal: (cwd) => ipcRenderer.invoke('terminal:start', cwd),
-  writeTerminal: (data) => ipcRenderer.send('terminal:write', data),
-  clearTerminal: () => ipcRenderer.invoke('terminal:clear'),
-  setTerminalCwd: (cwd) => ipcRenderer.invoke('terminal:setCwd', cwd),
+  startTerminal: (cwd, tabId = 'tab-1') => ipcRenderer.invoke('terminal:start', { cwd, tabId }),
+  writeTerminal: (data, tabId = 'tab-1') => ipcRenderer.send('terminal:write', { data, tabId }),
+  clearTerminal: (tabId = 'tab-1') => ipcRenderer.invoke('terminal:clear', tabId),
+  closeTerminalTab: (tabId) => ipcRenderer.invoke('terminal:closeTab', tabId),
+  setTerminalCwd: (cwd, tabId = null) => ipcRenderer.invoke('terminal:setCwd', { cwd, tabId }),
+  openTerminalWindow: (cwd) => ipcRenderer.invoke('terminal:openExternalWindow', cwd),
+  focusTerminalWindow: () => ipcRenderer.invoke('terminal:focusExternalWindow'),
+  closeTerminalWindow: () => ipcRenderer.invoke('terminal:closeExternalWindow'),
+  isTerminalWindowOpen: () => ipcRenderer.invoke('terminal:isExternalWindowOpen'),
+  setAlwaysOnTop: (flag) => ipcRenderer.invoke('terminal:setAlwaysOnTop', flag),
+  openSystemTerminal: (cwd, type) => ipcRenderer.invoke('terminal:openSystemTerminal', { cwd, type }),
+  onTerminalWindowClosed: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('terminal:windowClosed', handler);
+    return () => ipcRenderer.removeListener('terminal:windowClosed', handler);
+  },
   onTerminalData: (callback) => {
-    const handler = (_, data) => callback(data);
+    const handler = (_, payload) => callback(payload);
     ipcRenderer.on('terminal:data', handler);
     return () => ipcRenderer.removeListener('terminal:data', handler);
   },
   onTerminalSuggestions: (callback) => {
-    const handler = (_, suggestions) => callback(suggestions);
+    const handler = (_, payload) => callback(payload);
     ipcRenderer.on('terminal:suggestions', handler);
     return () => ipcRenderer.removeListener('terminal:suggestions', handler);
-  }
+  },
+  onTerminalOpenNewTab: (callback) => {
+    const handler = (_, newCwd) => callback(newCwd);
+    ipcRenderer.on('terminal:openNewTab', handler);
+    return () => ipcRenderer.removeListener('terminal:openNewTab', handler);
+  },
+  onRepoOpenPath: (callback) => {
+    const handler = (_, repoPath) => callback(repoPath);
+    ipcRenderer.on('repo:openPath', handler);
+    return () => ipcRenderer.removeListener('repo:openPath', handler);
+  },
+
+  // Context Menu Integration
+  registerContextMenu: () => ipcRenderer.invoke('contextMenu:register'),
+  unregisterContextMenu: () => ipcRenderer.invoke('contextMenu:unregister'),
+  isContextMenuRegistered: () => ipcRenderer.invoke('contextMenu:isRegistered')
 });
+

@@ -1,11 +1,40 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const gitService = require('./git-service');
 const terminalService = require('./terminal-service');
+const contextMenuService = require('./context-menu-service');
 
 let mainWindow = null;
+let terminalWindow = null;
 
-function createWindow() {
+function parseLaunchArgs(argv) {
+  let isTerminalLaunch = false;
+  let targetPath = null;
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--terminal' || arg === '-t') {
+      isTerminalLaunch = true;
+      if (i + 1 < argv.length && !argv[i + 1].startsWith('-')) {
+        targetPath = argv[i + 1];
+      }
+    } else if (typeof arg === 'string' && arg.startsWith('--terminal=')) {
+      isTerminalLaunch = true;
+      targetPath = arg.split('=')[1];
+    } else if (i > 0 && typeof arg === 'string' && !arg.startsWith('-') && !arg.includes('node_modules') && !arg.endsWith('git-manager') && !arg.endsWith('.js') && !arg.endsWith('.json')) {
+      try {
+        if (fs.existsSync(arg) && fs.statSync(arg).isDirectory()) {
+          targetPath = arg;
+        }
+      } catch (e) {}
+    }
+  }
+
+  return { isTerminalLaunch, targetPath };
+}
+
+function createWindow(initialRepoPath = null) {
   // Disable default menu bar
   Menu.setApplicationMenu(null);
 
@@ -43,19 +72,126 @@ function createWindow() {
   });
 
   mainWindow.on('closed', () => {
-    terminalService.killSession();
     mainWindow = null;
+    if (!terminalWindow || terminalWindow.isDestroyed()) {
+      terminalService.killSession();
+    }
   });
 }
 
-// App lifecycle
-app.whenReady().then(() => {
-  createWindow();
+function openTerminalWindow(cwd = null) {
+  if (terminalWindow && !terminalWindow.isDestroyed()) {
+    if (terminalWindow.isMinimized()) terminalWindow.restore();
+    terminalWindow.focus();
+    if (cwd) {
+      terminalService.setCwd(cwd);
+      terminalWindow.webContents.send('terminal:openNewTab', cwd);
+    }
+    return { success: true, windowId: terminalWindow.id };
+  }
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  const terminalIconPath = process.platform === 'win32'
+    ? path.join(__dirname, '../../assets/terminal-icon.ico')
+    : path.join(__dirname, '../../assets/terminal-icon.png');
+
+  terminalWindow = new BrowserWindow({
+    width: 960,
+    height: 600,
+    minWidth: 540,
+    minHeight: 340,
+    icon: terminalIconPath,
+    autoHideMenuBar: true,
+    backgroundColor: '#300a24',
+    title: 'Git Nexus - Terminal',
+    frame: true,
+    webPreferences: {
+      preload: path.join(__dirname, '../preload/preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: false
+    }
   });
-});
+
+  terminalWindow.setMenuBarVisibility(false);
+  terminalWindow.loadFile(path.join(__dirname, '../renderer/terminal-window.html'), {
+    query: cwd ? { cwd } : {}
+  });
+
+  const termWc = terminalWindow.webContents;
+
+  terminalWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  terminalWindow.on('closed', () => {
+    terminalService.removeSender(termWc);
+    terminalWindow = null;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      try {
+        mainWindow.webContents.send('terminal:windowClosed');
+      } catch (e) { /* ignore */ }
+    } else {
+      terminalService.killSession();
+    }
+  });
+
+  terminalService.init(terminalWindow);
+  if (cwd) {
+    terminalService.setCwd(cwd);
+  }
+
+  return { success: true, windowId: terminalWindow.id };
+}
+
+// Single instance lock
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    const { isTerminalLaunch, targetPath } = parseLaunchArgs(commandLine);
+    const resolvedPath = targetPath || workingDirectory;
+
+    if (isTerminalLaunch) {
+      if (terminalWindow && !terminalWindow.isDestroyed()) {
+        if (terminalWindow.isMinimized()) terminalWindow.restore();
+        terminalWindow.focus();
+        if (resolvedPath) {
+          terminalWindow.webContents.send('terminal:openNewTab', resolvedPath);
+        }
+      } else {
+        openTerminalWindow(resolvedPath);
+      }
+    } else {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+        if (resolvedPath) {
+          mainWindow.webContents.send('repo:openPath', resolvedPath);
+        }
+      } else {
+        createWindow(resolvedPath);
+      }
+    }
+  });
+
+  // App lifecycle
+  app.whenReady().then(() => {
+    const { isTerminalLaunch, targetPath } = parseLaunchArgs(process.argv);
+
+    if (isTerminalLaunch) {
+      openTerminalWindow(targetPath || process.cwd());
+    } else {
+      createWindow(targetPath);
+    }
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -98,44 +234,60 @@ ipcMain.handle('git:getAheadCommits', async (_, repoPath, branchName, targetBran
   return await gitService.getAheadCommits(repoPath, branchName, targetBranch);
 });
 
+ipcMain.handle('git:getBehindCommits', async (_, repoPath, branchName, targetBranch) => {
+  return await gitService.getBehindCommits(repoPath, branchName, targetBranch);
+});
+
+ipcMain.handle('git:getBranchStatusDetails', async (_, repoPath) => {
+  return await gitService.getBranchStatusDetails(repoPath);
+});
+
 ipcMain.handle('git:createBranch', async (_, repoPath, branchName, baseBranch, checkout) => {
   return await gitService.createBranch(repoPath, branchName, baseBranch, checkout);
 });
 
-ipcMain.handle('git:checkoutBranch', async (_, repoPath, branchName, createIfMissing) => {
-  return await gitService.checkoutBranch(repoPath, branchName, createIfMissing);
+ipcMain.handle('git:checkoutBranch', async (_, repoPath, branchName) => {
+  return await gitService.checkoutBranch(repoPath, branchName);
 });
 
-ipcMain.handle('git:deleteBranch', async (_, repoPath, branchName, isRemote, force) => {
-  return await gitService.deleteBranch(repoPath, branchName, isRemote, force);
+ipcMain.handle('git:deleteBranch', async (_, repoPath, branchName, force) => {
+  return await gitService.deleteBranch(repoPath, branchName, force);
 });
 
 ipcMain.handle('git:mergeBranch', async (_, repoPath, sourceBranch, options) => {
   return await gitService.mergeBranch(repoPath, sourceBranch, options);
 });
 
-ipcMain.handle('git:fetch', async (_, repoPath, remote, prune) => {
-  return await gitService.fetch(repoPath, remote, prune);
+ipcMain.handle('git:fetch', async (_, repoPath, remote) => {
+  return await gitService.fetch(repoPath, remote);
 });
 
 ipcMain.handle('git:pull', async (_, repoPath, remote, branch) => {
   return await gitService.pull(repoPath, remote, branch);
 });
 
-ipcMain.handle('git:push', async (_, repoPath, remote, branch, setUpstream, force) => {
-  return await gitService.push(repoPath, remote, branch, setUpstream, force);
+ipcMain.handle('git:push', async (_, repoPath, remote, branch, options) => {
+  return await gitService.push(repoPath, remote, branch, options);
 });
 
-ipcMain.handle('git:stageFiles', async (_, repoPath, files) => {
-  return await gitService.stageFiles(repoPath, files);
+ipcMain.handle('git:stageFile', async (_, repoPath, filePath) => {
+  return await gitService.stageFile(repoPath, filePath);
 });
 
-ipcMain.handle('git:unstageFiles', async (_, repoPath, files) => {
-  return await gitService.unstageFiles(repoPath, files);
+ipcMain.handle('git:stageAll', async (_, repoPath) => {
+  return await gitService.stageAll(repoPath);
 });
 
-ipcMain.handle('git:discardChanges', async (_, repoPath, filePath, isUntracked) => {
-  return await gitService.discardChanges(repoPath, filePath, isUntracked);
+ipcMain.handle('git:unstageFile', async (_, repoPath, filePath) => {
+  return await gitService.unstageFile(repoPath, filePath);
+});
+
+ipcMain.handle('git:unstageAll', async (_, repoPath) => {
+  return await gitService.unstageAll(repoPath);
+});
+
+ipcMain.handle('git:discardFileChanges', async (_, repoPath, filePath, isUntracked) => {
+  return await gitService.discardFileChanges(repoPath, filePath, isUntracked);
 });
 
 ipcMain.handle('git:commit', async (_, repoPath, message, description) => {
@@ -171,24 +323,96 @@ ipcMain.handle('git:getAllRepoFiles', async (_, repoPath) => {
 });
 
 // IPC Handlers: Terminal
-ipcMain.handle('terminal:start', async (event, cwd) => {
+ipcMain.handle('terminal:start', async (event, payload) => {
   terminalService.init(event.sender);
-  return terminalService.startSession(cwd);
+  const cwd = typeof payload === 'string' ? payload : (payload?.cwd);
+  const tabId = typeof payload === 'object' ? payload?.tabId : 'tab-1';
+  return terminalService.startSession(cwd, tabId || 'tab-1');
 });
 
-ipcMain.on('terminal:write', (event, data) => {
+ipcMain.on('terminal:write', (event, payload) => {
   terminalService.init(event.sender);
-  terminalService.write(data);
+  if (typeof payload === 'object' && payload !== null && payload.data !== undefined) {
+    terminalService.write(payload.data, payload.tabId || 'tab-1');
+  } else {
+    terminalService.write(payload, 'tab-1');
+  }
 });
 
-ipcMain.handle('terminal:setCwd', async (event, cwd) => {
+ipcMain.handle('terminal:setCwd', async (event, payload) => {
   terminalService.init(event.sender);
-  terminalService.setCwd(cwd);
+  const cwd = typeof payload === 'string' ? payload : (payload?.cwd);
+  const tabId = typeof payload === 'object' ? payload?.tabId : null;
+  terminalService.setCwd(cwd, tabId);
   return { success: true };
 });
 
-ipcMain.handle('terminal:clear', async (event) => {
+ipcMain.handle('terminal:clear', async (event, tabId) => {
   terminalService.init(event.sender);
-  return terminalService.clearSession();
+  return terminalService.clearSession(typeof tabId === 'string' ? tabId : 'tab-1');
 });
 
+ipcMain.handle('terminal:closeTab', async (event, tabId) => {
+  terminalService.init(event.sender);
+  return terminalService.closeTab(tabId);
+});
+
+ipcMain.handle('terminal:openExternalWindow', async (event, cwd) => {
+  return openTerminalWindow(cwd);
+});
+
+ipcMain.handle('terminal:focusExternalWindow', async () => {
+  if (terminalWindow && !terminalWindow.isDestroyed()) {
+    try {
+      if (terminalWindow.isMinimized()) terminalWindow.restore();
+      terminalWindow.focus();
+      return { success: true };
+    } catch (e) { /* ignore */ }
+  }
+  return { success: false };
+});
+
+ipcMain.handle('terminal:closeExternalWindow', async () => {
+  if (terminalWindow && !terminalWindow.isDestroyed()) {
+    try {
+      terminalWindow.close();
+    } catch (e) { /* ignore */ }
+  }
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    try {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    } catch (e) { /* ignore */ }
+  }
+  return { success: true };
+});
+
+ipcMain.handle('terminal:isExternalWindowOpen', async () => {
+  return Boolean(terminalWindow && !terminalWindow.isDestroyed());
+});
+
+ipcMain.handle('terminal:setAlwaysOnTop', async (event, flag) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win && !win.isDestroyed()) {
+    win.setAlwaysOnTop(Boolean(flag));
+    return { success: true, isAlwaysOnTop: win.isAlwaysOnTop() };
+  }
+  return { success: false };
+});
+
+ipcMain.handle('terminal:openSystemTerminal', async (_, { cwd, type }) => {
+  return terminalService.openSystemTerminal(cwd, type);
+});
+
+// IPC Handlers: Context Menu Registration
+ipcMain.handle('contextMenu:register', async () => {
+  return await contextMenuService.register();
+});
+
+ipcMain.handle('contextMenu:unregister', async () => {
+  return await contextMenuService.unregister();
+});
+
+ipcMain.handle('contextMenu:isRegistered', async () => {
+  return await contextMenuService.isRegistered();
+});

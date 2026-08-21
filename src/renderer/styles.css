@@ -2495,6 +2495,120 @@ main.workspace-content {
   background-color: #300a24 !important;
 }
 
+/* System Terminal Dropdown Menu */
+.system-term-dropdown {
+  position: relative;
+}
+
+.system-term-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 195px;
+  background: #24061a;
+  border: 1px solid #5e2750;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+  padding: 4px;
+  z-index: 100;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.system-term-menu.open {
+  display: flex;
+}
+
+.system-term-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 11.5px;
+  color: #dfdbd2;
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.12s, color 0.12s;
+  font-family: inherit;
+}
+
+.system-term-item:hover {
+  background: #380c2a;
+  color: #ffffff;
+}
+
+.system-term-item svg {
+  color: #e95420;
+  flex-shrink: 0;
+}
+
+/* Terminal Popped Out Overlay State */
+.terminal-popped-overlay {
+  position: absolute;
+  inset: 38px 0 0 0;
+  background: rgba(36, 6, 26, 0.92);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.terminal-popped-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  background: #300a24;
+  border: 1px solid #5e2750;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.popped-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: rgba(233, 84, 32, 0.18);
+  border: 1px solid rgba(233, 84, 32, 0.3);
+  color: #e95420;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.popped-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.popped-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.popped-desc {
+  font-size: 11px;
+  color: #dfdbd2;
+  opacity: 0.85;
+}
+
+.popped-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
 /* ==========================================================================
    Modal Dialogs System
    ========================================================================== */
