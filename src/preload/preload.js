@@ -79,9 +79,10 @@ contextBridge.exposeInMainWorld('api', {
     return () => ipcRenderer.removeListener('repo:openPath', handler);
   },
 
-  // Context Menu Integration
+  // Context Menu & Shortcuts Integration
   registerContextMenu: () => ipcRenderer.invoke('contextMenu:register'),
   unregisterContextMenu: () => ipcRenderer.invoke('contextMenu:unregister'),
-  isContextMenuRegistered: () => ipcRenderer.invoke('contextMenu:isRegistered')
+  isContextMenuRegistered: () => ipcRenderer.invoke('contextMenu:isRegistered'),
+  createDesktopShortcut: () => ipcRenderer.invoke('system:createDesktopShortcut')
 });
 

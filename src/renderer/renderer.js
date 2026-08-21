@@ -24,7 +24,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     historyDisplayMode: 'tree', // 'tree' | 'timeline'
     allRepoFiles: [],
     activeFhDropdownIndex: -1,
-    filteredRepoFiles: []
+    filteredRepoFiles: [],
+    operationLogs: [],
+    unreadErrorsCount: 0,
+    logsFilter: 'all', // 'all' | 'error' | 'success'
+    logsSearchQuery: ''
   };
 
   // Top Header Elements
@@ -38,6 +42,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnModalMerge = document.getElementById('btn-modal-merge');
   const btnFileHistoryQuick = document.getElementById('btn-file-history-quick');
   const btnToggleTerminal = document.getElementById('btn-toggle-terminal');
+  const btnOpenErrorLogs = document.getElementById('btn-open-error-logs');
+  const headerErrorBadge = document.getElementById('header-error-badge');
+
+  // Error Logs Modal Elements
+  const modalErrorLogs = document.getElementById('modal-error-logs');
+  const errorLogsContainer = document.getElementById('error-logs-container');
+  const btnFilterLogsAll = document.getElementById('btn-filter-logs-all');
+  const btnFilterLogsErrors = document.getElementById('btn-filter-logs-errors');
+  const btnFilterLogsSuccess = document.getElementById('btn-filter-logs-success');
+  const inputSearchLogs = document.getElementById('input-search-logs');
+  const btnCopyAllLogs = document.getElementById('btn-copy-all-logs');
+  const btnClearLogs = document.getElementById('btn-clear-logs');
+  const logsStatusSummary = document.getElementById('logs-status-summary');
 
   const activeRepoPill = document.getElementById('active-repo-pill');
   const activeRepoName = document.getElementById('active-repo-name');
@@ -197,24 +214,591 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Apply initial theme
   applyTheme(savedTheme);
 
+  // Smart Git Error Formatter
+  function formatGitErrorMessage(rawError) {
+    if (!rawError) return { title: 'Operation Notice', message: 'An unexpected notice occurred.' };
+
+    const str = String(rawError).trim();
+
+    // 1. Uncommitted changes blocking checkout / switch / merge / pull
+    if (/overwritten by (checkout|merge|pull|rebase)/i.test(str) || (/local changes/i.test(str) && /commit.*stash/i.test(str))) {
+      const fileMatches = str.match(/error:\s*Your local changes to the following files would be overwritten by [^:]+:\s*([\s\S]+?)\s*Please commit/i);
+      let countText = '';
+      if (fileMatches && fileMatches[1]) {
+        const files = fileMatches[1].trim().split(/\s+/).filter(Boolean);
+        countText = ` in ${files.length} file${files.length > 1 ? 's' : ''}`;
+      }
+      return {
+        title: 'Uncommitted Changes Conflict',
+        message: `Local modifications${countText} would be overwritten. Please commit or stash them first.`,
+        raw: str
+      };
+    }
+
+    // 2. Automatic merge conflicts
+    if (/Automatic merge failed/i.test(str) || /fix conflicts and then commit/i.test(str) || /merge conflict in/i.test(str)) {
+      return {
+        title: 'Merge Conflict Detected',
+        message: 'Automatic merge encountered conflicting changes. Please resolve conflicts or abort.',
+        raw: str
+      };
+    }
+
+    // 3. Push rejected (remote has new commits)
+    if (/Updates were rejected because the remote contains work/i.test(str) || /\[rejected\].*fetch first/i.test(str) || /non-fast-forward/i.test(str)) {
+      return {
+        title: 'Push Rejected (Remote Ahead)',
+        message: 'Remote branch contains new commits. Please Pull first before pushing.',
+        raw: str
+      };
+    }
+
+    // 4. No upstream branch configured
+    if (/has no upstream branch/i.test(str) || /set-upstream/i.test(str) || /no tracking information/i.test(str)) {
+      const branchMatch = str.match(/current branch\s+([^\s]+)\s+has no upstream/i);
+      const branchName = branchMatch ? branchMatch[1] : '';
+      return {
+        title: 'No Upstream Branch',
+        message: branchName ? `Branch '${branchName}' has no remote tracking branch. Use 'Push with Upstream'.` : 'No remote tracking branch configured. Publish branch with upstream.',
+        raw: str
+      };
+    }
+
+    // 5. Branch already exists
+    if (/a branch named ['"]?([^'"]+)['"]? already exists/i.test(str)) {
+      const match = str.match(/a branch named ['"]?([^'"]+)['"]? already exists/i);
+      return {
+        title: 'Branch Already Exists',
+        message: `A branch named '${match[1]}' already exists in this repository.`,
+        raw: str
+      };
+    }
+
+    // 6. Branch or pathspec not found
+    if (/pathspec ['"]?([^'"]+)['"]? did not match any file/i.test(str) || /cannot find branch/i.test(str)) {
+      return {
+        title: 'Branch / Reference Not Found',
+        message: 'The requested branch or commit reference could not be found.',
+        raw: str
+      };
+    }
+
+    // 7. Authentication / SSH / Permission failure
+    if (/Permission denied \(publickey\)/i.test(str) || /Authentication failed/i.test(str) || /could not read Username/i.test(str) || /Invalid username or password/i.test(str)) {
+      return {
+        title: 'Authentication Failed',
+        message: 'Git credentials or SSH key could not be verified for the remote repository.',
+        raw: str
+      };
+    }
+
+    // 8. Remote repository not found
+    if (/repository ['"]?([^'"]+)['"]? not found/i.test(str)) {
+      return {
+        title: 'Remote Repository Not Found',
+        message: 'The remote repository was not found or access is restricted.',
+        raw: str
+      };
+    }
+
+    // 9. Git lock file exists
+    if (/Another git process seems to be running/i.test(str) || /index\.lock': File exists/i.test(str)) {
+      return {
+        title: 'Git Repository Locked',
+        message: 'Another Git process is running, or a stale .git/index.lock file exists.',
+        raw: str
+      };
+    }
+
+    // 10. Untracked working tree files would be overwritten
+    if (/The following untracked working tree files would be overwritten/i.test(str)) {
+      return {
+        title: 'Untracked Files Conflict',
+        message: 'Untracked files would be overwritten. Please move or discard them first.',
+        raw: str
+      };
+    }
+
+    // 11. Generic clean-up for other messages:
+    let cleaned = str
+      .replace(/^error:\s*/i, '')
+      .replace(/^fatal:\s*/i, '')
+      .replace(/^(checkout|push|pull|merge|commit|fetch|stage|unstage|discard)\s+failed:\s*(error:\s*|fatal:\s*)?/i, '')
+      .trim();
+
+    // Take only the first clean line/sentence
+    const lines = cleaned.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    let summary = lines[0] || cleaned;
+    if (summary.length > 120) {
+      summary = summary.slice(0, 117) + '...';
+    }
+
+    return {
+      title: 'Action Notice',
+      message: summary,
+      raw: str
+    };
+  }
+
   // Toast Notification System
-  function showToast(message, type = 'info') {
+  function showToast(messageOrPayload, type = 'info', customTitle = null) {
     const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    let title = customTitle;
+    let message = '';
+    let rawError = null;
+
+    if (typeof messageOrPayload === 'object' && messageOrPayload !== null) {
+      title = messageOrPayload.title || title;
+      message = messageOrPayload.message || '';
+      rawError = messageOrPayload.raw || null;
+    } else {
+      message = String(messageOrPayload || '');
+      if (type === 'error') {
+        const parsed = formatGitErrorMessage(message);
+        title = title || parsed.title;
+        message = parsed.message;
+        rawError = parsed.raw;
+      }
+    }
+
+    if (!title) {
+      if (type === 'success') title = 'Success';
+      else if (type === 'error') title = 'Action Failed';
+      else if (type === 'warning') title = 'Warning';
+      else title = 'Notice';
+    }
+
+    // Limit maximum active toasts in container to 3 (auto-remove oldest)
+    while (container.children.length >= 3) {
+      container.firstChild.remove();
+    }
+
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
+
+    let iconSvg = '';
+    if (type === 'success') {
+      iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+    } else if (type === 'error') {
+      iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
+    } else if (type === 'warning') {
+      iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+    } else {
+      iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+    }
+
+    toast.innerHTML = `
+      <div class="toast-icon-wrap">${iconSvg}</div>
+      <div class="toast-content-wrap">
+        <div class="toast-title-text">${escapeHtml(title)}</div>
+        <div class="toast-msg-text">${escapeHtml(message)}</div>
+      </div>
+      <div class="toast-actions-wrap">
+        ${rawError ? `<button class="toast-btn-action toast-copy-btn" title="Copy full error details"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>` : ''}
+        <button class="toast-btn-action toast-close-btn" title="Dismiss">✕</button>
+      </div>
+    `;
+
+    // Automatically record into persistent session log store
+    addOperationLog({
+      type,
+      action: customTitle || (type === 'error' ? 'Git Operation Failed' : 'Git Operation'),
+      title,
+      message,
+      raw: rawError
+    });
+
+    if (rawError) {
+      const copyBtn = toast.querySelector('.toast-copy-btn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(rawError);
+          copyBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+          setTimeout(() => {
+            copyBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+          }, 1500);
+        });
+      }
+    }
+
+    const closeBtn = toast.querySelector('.toast-close-btn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        dismissToast(toast);
+      });
+    }
+
     container.appendChild(toast);
+
+    let dismissTimer = setTimeout(() => {
+      dismissToast(toast);
+    }, 4500);
+
+    toast.addEventListener('mouseenter', () => {
+      if (dismissTimer) clearTimeout(dismissTimer);
+    });
+
+    toast.addEventListener('mouseleave', () => {
+      dismissTimer = setTimeout(() => {
+        dismissToast(toast);
+      }, 2000);
+    });
+  }
+
+  function dismissToast(toastEl) {
+    if (!toastEl || !toastEl.parentElement) return;
+    toastEl.style.opacity = '0';
+    toastEl.style.transform = 'translateY(8px) scale(0.96)';
+    toastEl.style.transition = 'all 0.22s ease';
     setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateY(10px)';
-      toast.style.transition = 'all 0.3s ease';
-      setTimeout(() => toast.remove(), 300);
-    }, 4000);
+      if (toastEl.parentElement) toastEl.remove();
+    }, 220);
   }
 
   function escapeHtml(str) {
     if (!str) return '';
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // ==========================================
+  // Error & Operation Logs Management System
+  // ==========================================
+  function addOperationLog({ type = 'info', action = 'General', title = '', message = '', raw = null }) {
+    const logEntry = {
+      id: 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+      timestamp: new Date(),
+      timeFormatted: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      type, // 'error' | 'success' | 'warning' | 'info'
+      action,
+      title: title || (type === 'error' ? 'Error' : 'Notice'),
+      message: message || '',
+      raw: raw ? String(raw).trim() : null
+    };
+
+    state.operationLogs.unshift(logEntry);
+    if (state.operationLogs.length > 200) {
+      state.operationLogs.pop();
+    }
+
+    if (type === 'error') {
+      state.unreadErrorsCount++;
+      updateHeaderErrorBadge();
+    }
+
+    updateLogsCountBadges();
+
+    // If modal is open, re-render
+    if (modalErrorLogs && modalErrorLogs.classList.contains('active')) {
+      renderErrorLogs();
+    }
+
+    return logEntry;
+  }
+
+  function updateHeaderErrorBadge() {
+    if (!headerErrorBadge) return;
+    const activeBadge = document.getElementById('logs-active-badge');
+    if (state.unreadErrorsCount > 0) {
+      const text = state.unreadErrorsCount > 99 ? '99+' : state.unreadErrorsCount;
+      headerErrorBadge.textContent = text;
+      headerErrorBadge.style.display = 'inline-block';
+      if (activeBadge) {
+        activeBadge.textContent = `${text} Error${state.unreadErrorsCount > 1 ? 's' : ''}`;
+        activeBadge.style.display = 'inline-block';
+      }
+    } else {
+      headerErrorBadge.style.display = 'none';
+      if (activeBadge) activeBadge.style.display = 'none';
+    }
+  }
+
+  function updateLogsCountBadges() {
+    const elAll = document.getElementById('logs-count-all');
+    const elErrors = document.getElementById('logs-count-errors');
+    const elSuccess = document.getElementById('logs-count-success');
+
+    const total = state.operationLogs.length;
+    const errors = state.operationLogs.filter(l => l.type === 'error').length;
+    const success = state.operationLogs.filter(l => l.type === 'success' || l.type === 'info').length;
+
+    if (elAll) elAll.textContent = total;
+    if (elErrors) elErrors.textContent = errors;
+    if (elSuccess) elSuccess.textContent = success;
+    if (logsStatusSummary) {
+      logsStatusSummary.textContent = `${total} log entries recorded (${errors} error${errors === 1 ? '' : 's'})`;
+    }
+  }
+
+  function openErrorLogsModal() {
+    state.unreadErrorsCount = 0;
+    updateHeaderErrorBadge();
+    updateLogsCountBadges();
+
+    // Select latest error or first item if none selected
+    if (!state.selectedLogId && state.operationLogs.length > 0) {
+      const firstError = state.operationLogs.find(l => l.type === 'error');
+      state.selectedLogId = firstError ? firstError.id : state.operationLogs[0].id;
+    }
+
+    modalErrorLogs.classList.add('active');
+    renderErrorLogs();
+  }
+
+  function renderErrorLogs() {
+    const listContainer = document.getElementById('error-logs-list');
+    if (!listContainer) return;
+
+    let filtered = state.operationLogs;
+
+    // Filter by tab mode
+    if (state.logsFilter === 'error') {
+      filtered = filtered.filter(l => l.type === 'error');
+    } else if (state.logsFilter === 'success') {
+      filtered = filtered.filter(l => l.type === 'success' || l.type === 'info');
+    }
+
+    // Filter by search keyword
+    if (state.logsSearchQuery) {
+      const q = state.logsSearchQuery.toLowerCase();
+      filtered = filtered.filter(l => 
+        (l.title && l.title.toLowerCase().includes(q)) ||
+        (l.message && l.message.toLowerCase().includes(q)) ||
+        (l.action && l.action.toLowerCase().includes(q)) ||
+        (l.raw && l.raw.toLowerCase().includes(q))
+      );
+    }
+
+    if (filtered.length === 0) {
+      listContainer.innerHTML = `
+        <div class="logs-empty-placeholder" style="padding: 36px 12px;">
+          <div class="logs-empty-icon" style="font-size: 24px;">📋</div>
+          <div class="fw-semibold text-12" style="color: var(--text-primary);">No matching logs</div>
+          <p class="text-11 text-muted mb-0">No logs found for current filter.</p>
+        </div>
+      `;
+      renderLogInspector(null);
+      return;
+    }
+
+    // Ensure a valid selected item exists
+    if (!filtered.some(l => l.id === state.selectedLogId)) {
+      state.selectedLogId = filtered[0].id;
+    }
+
+    listContainer.innerHTML = filtered.map(log => {
+      const isSelected = log.id === state.selectedLogId;
+      return `
+        <div class="log-entry-row type-${escapeHtml(log.type)} ${isSelected ? 'selected' : ''}" data-id="${escapeHtml(log.id)}">
+          <div class="log-row-top">
+            <span class="log-row-badge">${escapeHtml(log.type)}</span>
+            <span class="log-row-time">${escapeHtml(log.timeFormatted)}</span>
+          </div>
+          <div class="log-row-action">${escapeHtml(log.action || 'Git Operation')}</div>
+          <div class="log-row-snippet" title="${escapeHtml(log.message)}">${escapeHtml(log.title)}: ${escapeHtml(log.message)}</div>
+        </div>
+      `;
+    }).join('');
+
+    // Attach click listeners to rows
+    listContainer.querySelectorAll('.log-entry-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const id = row.getAttribute('data-id');
+        state.selectedLogId = id;
+        listContainer.querySelectorAll('.log-entry-row').forEach(r => r.classList.remove('selected'));
+        row.classList.add('selected');
+        const selectedLog = state.operationLogs.find(l => l.id === id);
+        renderLogInspector(selectedLog);
+      });
+    });
+
+    const activeLog = state.operationLogs.find(l => l.id === state.selectedLogId) || filtered[0];
+    renderLogInspector(activeLog);
+  }
+
+  function renderLogInspector(log) {
+    const inspector = document.getElementById('logs-inspector-content');
+    if (!inspector) return;
+
+    if (!log) {
+      inspector.innerHTML = `
+        <div class="error-logs-empty-inspector">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--text-muted); opacity: 0.5;">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <div style="font-size: 14px; font-weight: 600; color: var(--text-primary);">Select a Log Entry</div>
+          <p style="font-size: 12px; color: var(--text-muted); max-width: 320px;">Choose an operation or error on the left to inspect full diagnostics, CLI traces, and recommendations.</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Smart Recommended Resolutions
+    let solutionHtml = '';
+    const rawLower = (log.raw || log.message || '').toLowerCase();
+
+    if (rawLower.includes('overwritten by checkout') || rawLower.includes('commit your changes or stash')) {
+      solutionHtml = `
+        <div class="inspector-solution-box">
+          <div class="solution-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+            <span>Recommended Resolution</span>
+          </div>
+          <div class="solution-body">
+            You have active uncommitted files that would be modified or overwritten by switching branches.<br>
+            • <strong>Option A (Stash):</strong> Run <code>git stash</code> in the terminal to temporarily shelve your changes, switch branches, and later run <code>git stash pop</code>.<br>
+            • <strong>Option B (Commit):</strong> Stage and commit your current work to the current branch before checking out the target branch.
+          </div>
+        </div>
+      `;
+    } else if (rawLower.includes('merge conflict') || rawLower.includes('automatic merge failed')) {
+      solutionHtml = `
+        <div class="inspector-solution-box">
+          <div class="solution-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+            <span>Recommended Resolution</span>
+          </div>
+          <div class="solution-body">
+            Both branches contain changes to the same lines in one or more files.<br>
+            • Open the <strong>Changes &amp; Staging</strong> tab to inspect the conflicting files.<br>
+            • Resolve the conflict markers or abort using <code>git merge --abort</code>.
+          </div>
+        </div>
+      `;
+    } else if (rawLower.includes('rejected') || rawLower.includes('fetch first') || rawLower.includes('non-fast-forward')) {
+      solutionHtml = `
+        <div class="inspector-solution-box">
+          <div class="solution-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+            <span>Recommended Resolution</span>
+          </div>
+          <div class="solution-body">
+            The remote branch contains commits that your local branch does not have.<br>
+            • Click the <strong>Pull</strong> button in the top header to integrate remote changes before pushing.<br>
+            • Or use <strong>Terminal</strong> to rebase your branch on top of origin.
+          </div>
+        </div>
+      `;
+    }
+
+    inspector.innerHTML = `
+      <div class="inspector-header-card type-${escapeHtml(log.type)}">
+        <div class="inspector-title-row">
+          <div class="inspector-title-main">
+            <span class="log-type-tag">${escapeHtml(log.type)}</span>
+            <span>${escapeHtml(log.action || 'Git Operation')}</span>
+          </div>
+          <span style="font-size: 11.5px; color: var(--text-muted); font-family: var(--font-mono, monospace);">${escapeHtml(log.timeFormatted)}</span>
+        </div>
+        <div class="inspector-explanation-box">
+          <strong style="color: var(--text-primary); font-size: 13.5px; display: block; margin-bottom: 4px;">${escapeHtml(log.title)}</strong>
+          <span>${escapeHtml(log.message)}</span>
+        </div>
+        ${solutionHtml}
+      </div>
+
+      ${log.raw ? `
+        <div class="inspector-terminal-card">
+          <div class="terminal-card-header">
+            <div class="terminal-header-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+              <span>Git CLI Diagnostic Stream (stderr/stdout)</span>
+            </div>
+            <div class="terminal-actions-group">
+              <button id="btn-toggle-wrap" class="btn-terminal-action" title="Toggle word wrapping">Wrap: ON</button>
+              <button id="btn-copy-inspector-raw" class="btn-terminal-action" title="Copy raw output to clipboard">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span>Copy Output</span>
+              </button>
+            </div>
+          </div>
+          <div id="inspector-terminal-viewport" class="terminal-viewport-box">${escapeHtml(log.raw)}</div>
+        </div>
+      ` : ''}
+
+      <div style="display: flex; gap: 12px; font-size: 11.5px; color: var(--text-muted); padding: 10px 14px; background: var(--bg-panel); border-radius: 8px; border: 1px solid var(--border-color);">
+        <div><strong>Repository:</strong> <span style="color: var(--text-primary); font-family: var(--font-mono, monospace);">${escapeHtml(state.currentRepoPath || 'None')}</span></div>
+        <div>&bull;</div>
+        <div><strong>Branch:</strong> <span style="color: var(--text-primary); font-family: var(--font-mono, monospace);">${escapeHtml(state.branchesData?.current || 'main')}</span></div>
+      </div>
+    `;
+
+    // Hook buttons inside inspector
+    const copyRawBtn = document.getElementById('btn-copy-inspector-raw');
+    if (copyRawBtn && log.raw) {
+      copyRawBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(log.raw);
+        const span = copyRawBtn.querySelector('span');
+        if (span) span.textContent = 'Copied!';
+        setTimeout(() => {
+          if (copyRawBtn.querySelector('span')) copyRawBtn.querySelector('span').textContent = 'Copy Output';
+        }, 1500);
+      });
+    }
+
+    const toggleWrapBtn = document.getElementById('btn-toggle-wrap');
+    const viewport = document.getElementById('inspector-terminal-viewport');
+    if (toggleWrapBtn && viewport) {
+      toggleWrapBtn.addEventListener('click', () => {
+        const isNowrap = viewport.classList.toggle('nowrap');
+        toggleWrapBtn.textContent = isNowrap ? 'Wrap: OFF' : 'Wrap: ON';
+      });
+    }
+  }
+
+  // Hook Logs Toolbar Controls
+  if (btnOpenErrorLogs) {
+    btnOpenErrorLogs.addEventListener('click', openErrorLogsModal);
+  }
+
+  [btnFilterLogsAll, btnFilterLogsErrors, btnFilterLogsSuccess].forEach(btn => {
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      [btnFilterLogsAll, btnFilterLogsErrors, btnFilterLogsSuccess].forEach(b => b?.classList.remove('active'));
+      btn.classList.add('active');
+      state.logsFilter = btn.getAttribute('data-filter') || 'all';
+      renderErrorLogs();
+    });
+  });
+
+  if (inputSearchLogs) {
+    inputSearchLogs.addEventListener('input', (e) => {
+      state.logsSearchQuery = e.target.value.trim();
+      renderErrorLogs();
+    });
+  }
+
+  if (btnCopyAllLogs) {
+    btnCopyAllLogs.addEventListener('click', () => {
+      if (state.operationLogs.length === 0) {
+        showToast('No logs available to copy', 'info');
+        return;
+      }
+      const dump = state.operationLogs.map(l => {
+        let text = `[${l.timeFormatted}] [${l.type.toUpperCase()}] [${l.action}] ${l.title} - ${l.message}`;
+        if (l.raw) text += `\nRaw output:\n${l.raw}`;
+        return text;
+      }).join('\n\n---\n\n');
+
+      navigator.clipboard.writeText(dump);
+      showToast('All operation logs copied to clipboard', 'success');
+    });
+  }
+
+  if (btnClearLogs) {
+    btnClearLogs.addEventListener('click', () => {
+      state.operationLogs = [];
+      state.unreadErrorsCount = 0;
+      state.selectedLogId = null;
+      updateHeaderErrorBadge();
+      updateLogsCountBadges();
+      renderErrorLogs();
+      showToast('Log history cleared', 'info');
+    });
   }
 
   // Task Loader & Background Processing Manager
@@ -2727,8 +3311,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.querySelectorAll('.modal-close-btn, .modal-cancel-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const modal = e.target.closest('.modal-backdrop');
+      const modal = e.target.closest('.modal-backdrop, .modal-overlay');
       closeModal(modal);
+    });
+  });
+
+  document.querySelectorAll('.modal-backdrop, .modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        closeModal(overlay);
+      }
     });
   });
 
@@ -2952,7 +3544,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // If inside an input or textarea, ignore arrow navigation
     const isInputActive = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
 
-    if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay.active, .modal-backdrop.active').forEach(m => closeModal(m));
+    } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
+      e.preventDefault();
+      openErrorLogsModal();
+    } else if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
       e.preventDefault();
       refreshRepository();
     } else if ((e.ctrlKey || e.metaKey) && e.key === '`') {

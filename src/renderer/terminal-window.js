@@ -427,11 +427,42 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // Update context menu label based on current status
+    const updateContextMenuStatus = async () => {
+      if (window.api.isContextMenuRegistered) {
+        const isReg = await window.api.isContextMenuRegistered();
+        const lbl = document.getElementById('label-context-menu');
+        if (lbl) lbl.textContent = isReg ? 'Remove Right-Click Context Menu' : 'Add Right-Click Context Menu';
+      }
+    };
+    updateContextMenuStatus();
+
     systemMenu.querySelectorAll('.system-term-item').forEach(item => {
       item.addEventListener('click', async () => {
-        const type = item.getAttribute('data-type');
+        const action = item.getAttribute('data-action');
         systemMenu.classList.remove('open');
-        await window.api.openSystemTerminal(manager.currentCwd, type);
+
+        if (action === 'create-shortcut') {
+          if (window.api.createDesktopShortcut) {
+            const res = await window.api.createDesktopShortcut();
+            alert(res.message || res.error);
+          }
+        } else if (action === 'toggle-context-menu') {
+          if (window.api.isContextMenuRegistered) {
+            const isReg = await window.api.isContextMenuRegistered();
+            if (isReg) {
+              const res = await window.api.unregisterContextMenu();
+              alert(res.message || 'Removed from context menu');
+            } else {
+              const res = await window.api.registerContextMenu();
+              alert(res.message || 'Added to context menu');
+            }
+            await updateContextMenuStatus();
+          }
+        } else {
+          const type = item.getAttribute('data-type');
+          await window.api.openSystemTerminal(manager.currentCwd, type);
+        }
       });
     });
   }
@@ -450,4 +481,26 @@ document.addEventListener('DOMContentLoaded', () => {
       if (cmd) manager.sendQuickCommand(cmd);
     });
   });
+
+  // Enable horizontal mouse wheel scrolling on chips bar
+  const chipsBar = document.getElementById('standalone-chips-bar');
+  if (chipsBar) {
+    chipsBar.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        chipsBar.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+  }
+
+  // Enable horizontal mouse wheel scrolling on tabs list
+  const tabsList = document.getElementById('terminal-tabs-list');
+  if (tabsList) {
+    tabsList.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        tabsList.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+  }
 });

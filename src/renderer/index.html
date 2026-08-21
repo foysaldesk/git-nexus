@@ -116,6 +116,18 @@
           <span>Terminal</span>
         </button>
 
+        <button id="btn-open-error-logs" class="btn" title="View Error & Operation Logs">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <span>Logs</span>
+          <span id="header-error-badge" class="badge-count badge-error-count" style="display: none;">0</span>
+        </button>
+
         <div class="theme-selector-container">
           <select id="select-theme" class="dropdown-filter-btn theme-select" title="Color Theme">
             <option value="system">💻 System</option>
@@ -785,6 +797,94 @@
         <div class="modal-footer fh-modal-footer">
           <div class="fh-footer-hint">
             <span>Tip: Click any revision on the left to compare diffs</span>
+          </div>
+          <button class="btn modal-cancel-btn">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error & Operation Logs Modal / Page -->
+    <div id="modal-error-logs" class="modal-backdrop">
+      <div class="modal-card modal-card-wide error-logs-modal-card">
+        <!-- Modal Top Header -->
+        <div class="modal-header">
+          <div class="modal-header-left">
+            <div class="modal-title-icon-box danger">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="modal-title">Git Diagnostics &amp; Error Console</span>
+                <span id="logs-active-badge" class="badge-count badge-error-count" style="display: none;">0 Errors</span>
+              </div>
+              <p class="modal-subtitle" style="margin: 0; font-size: 11.5px; color: var(--text-muted);">Inspect command execution logs, error traces, and recommended resolutions</p>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="btn-copy-all-logs" class="btn btn-sm" title="Copy all logs to clipboard">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span>Copy All</span>
+            </button>
+            <button id="btn-clear-logs" class="btn btn-sm" title="Clear log history">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>Clear</span>
+            </button>
+            <button class="modal-close-icon-btn modal-close-btn" title="Close [Esc]">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Modal Body with Split-Pane Layout -->
+        <div class="modal-body error-logs-modal-body">
+          <div class="error-logs-split-layout">
+            <!-- Left Pane: Search, Filters, Log Feed -->
+            <div class="error-logs-sidebar">
+              <div class="logs-sidebar-toolbar">
+                <div class="logs-search-wrapper">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="logs-search-icon">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input id="input-search-logs" type="text" placeholder="Search errors, commands..." class="logs-search-input" spellcheck="false" />
+                </div>
+                <div class="logs-filter-pills">
+                  <button id="btn-filter-logs-all" class="logs-filter-pill active" data-filter="all">All <span id="logs-count-all" class="pill-counter">0</span></button>
+                  <button id="btn-filter-logs-errors" class="logs-filter-pill" data-filter="error">Errors <span id="logs-count-errors" class="pill-counter error">0</span></button>
+                  <button id="btn-filter-logs-success" class="logs-filter-pill" data-filter="success">Success <span id="logs-count-success" class="pill-counter success">0</span></button>
+                </div>
+              </div>
+              <div id="error-logs-list" class="error-logs-list">
+                <!-- Dynamically populated log entries list -->
+              </div>
+            </div>
+
+            <!-- Right Pane: Detailed Diagnostic Inspector -->
+            <div class="error-logs-inspector">
+              <div id="logs-inspector-content" class="logs-inspector-content">
+                <!-- Dynamically populated detailed inspector -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="modal-footer error-logs-modal-footer">
+          <div class="logs-footer-info">
+            <span id="logs-status-summary">0 log entries recorded</span>
           </div>
           <button class="btn modal-cancel-btn">Close</button>
         </div>

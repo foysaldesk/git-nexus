@@ -416,3 +416,8 @@ ipcMain.handle('contextMenu:unregister', async () => {
 ipcMain.handle('contextMenu:isRegistered', async () => {
   return await contextMenuService.isRegistered();
 });
+
+// IPC Handlers: Desktop / System Shortcuts
+ipcMain.handle('system:createDesktopShortcut', async () => {
+  return await contextMenuService.createDesktopShortcut();
+});
