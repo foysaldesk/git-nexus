@@ -164,6 +164,9 @@ class MultiTabTerminalManager {
       window.api.writeTerminal(data, tabId);
     });
 
+    // Copy & Paste setup (Keyboard shortcuts, Right-click Context Menu, Middle click)
+    this.setupCopyPaste(term, viewportEl, tabId);
+
     // Store Tab Object
     const tabObj = {
       id: tabId,
@@ -373,6 +376,171 @@ class MultiTabTerminalManager {
         }
       }
     });
+  }
+
+  setupCopyPaste(term, viewportEl, tabId) {
+    // 1. Keyboard Copy & Paste Shortcuts
+    term.attachCustomKeyEventHandler((event) => {
+      // Preserve Tab key handling
+      if (event.key === 'Tab' && event.type === 'keydown') {
+        window.api.writeTerminal('\t', tabId);
+        event.preventDefault();
+        return false;
+      }
+
+      if (event.type === 'keydown') {
+        const isCtrlOrCmd = event.ctrlKey || event.metaKey;
+        const keyLower = event.key.toLowerCase();
+
+        // Copy: Ctrl+C / Cmd+C / Ctrl+Shift+C / Cmd+Shift+C
+        if (isCtrlOrCmd && keyLower === 'c') {
+          if (term.hasSelection()) {
+            const selection = term.getSelection();
+            if (selection) {
+              navigator.clipboard.writeText(selection);
+            }
+            event.preventDefault();
+            return false; // Suppress SIGINT interrupt signal when copying text
+          } else if (event.shiftKey) {
+            event.preventDefault();
+            return false;
+          }
+          // If no selection and plain Ctrl+C, let xterm send SIGINT (\x03)
+          return true;
+        }
+
+        // Paste: Ctrl+V / Cmd+V / Ctrl+Shift+V / Cmd+Shift+V
+        if (isCtrlOrCmd && keyLower === 'v') {
+          event.preventDefault();
+          navigator.clipboard.readText().then((text) => {
+            if (text) {
+              window.api.writeTerminal(text, tabId);
+            }
+          }).catch((err) => {
+            console.error('Clipboard paste failed:', err);
+          });
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    // 2. Right-Click Context Menu & Auto-Copy on Right Click
+    viewportEl.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+
+      // Auto-copy selection if text is selected when right clicking
+      if (term.hasSelection()) {
+        const selectedText = term.getSelection();
+        if (selectedText) {
+          navigator.clipboard.writeText(selectedText);
+        }
+      }
+
+      const menu = this.getOrCreateContextMenu();
+      const btnCopy = menu.querySelector('#ctx-term-copy');
+      const btnPaste = menu.querySelector('#ctx-term-paste');
+      const btnSelectAll = menu.querySelector('#ctx-term-select-all');
+      const btnClear = menu.querySelector('#ctx-term-clear');
+
+      btnCopy.disabled = !term.hasSelection();
+
+      btnCopy.onclick = () => {
+        if (term.hasSelection()) {
+          navigator.clipboard.writeText(term.getSelection());
+        }
+        menu.classList.remove('open');
+        term.focus();
+      };
+
+      btnPaste.onclick = () => {
+        menu.classList.remove('open');
+        navigator.clipboard.readText().then((text) => {
+          if (text) {
+            window.api.writeTerminal(text, tabId);
+          }
+        }).catch((err) => console.error(err));
+        term.focus();
+      };
+
+      btnSelectAll.onclick = () => {
+        menu.classList.remove('open');
+        term.selectAll();
+        term.focus();
+      };
+
+      btnClear.onclick = () => {
+        menu.classList.remove('open');
+        this.clearActive();
+        term.focus();
+      };
+
+      menu.classList.add('open');
+
+      const menuWidth = menu.offsetWidth || 175;
+      const menuHeight = menu.offsetHeight || 140;
+      let x = e.clientX;
+      let y = e.clientY;
+
+      if (x + menuWidth > window.innerWidth) {
+        x = window.innerWidth - menuWidth - 8;
+      }
+      if (y + menuHeight > window.innerHeight) {
+        y = window.innerHeight - menuHeight - 8;
+      }
+
+      menu.style.left = `${Math.max(5, x)}px`;
+      menu.style.top = `${Math.max(5, y)}px`;
+    });
+
+    // 3. Middle-Click Paste
+    viewportEl.addEventListener('auxclick', (e) => {
+      if (e.button === 1) { // Middle mouse button
+        e.preventDefault();
+        navigator.clipboard.readText().then((text) => {
+          if (text) {
+            window.api.writeTerminal(text, tabId);
+          }
+        }).catch((err) => console.error(err));
+      }
+    });
+  }
+
+  getOrCreateContextMenu() {
+    let menu = document.getElementById('terminal-context-menu');
+    if (!menu) {
+      menu = document.createElement('div');
+      menu.id = 'terminal-context-menu';
+      menu.className = 'terminal-context-menu';
+      menu.innerHTML = `
+        <button class="context-menu-item" id="ctx-term-copy">
+          <span>📋 Copy</span>
+          <span class="context-menu-shortcut">Ctrl+C</span>
+        </button>
+        <button class="context-menu-item" id="ctx-term-paste">
+          <span>📥 Paste</span>
+          <span class="context-menu-shortcut">Ctrl+V</span>
+        </button>
+        <div class="context-menu-divider"></div>
+        <button class="context-menu-item" id="ctx-term-select-all">
+          <span>🔍 Select All</span>
+        </button>
+        <button class="context-menu-item" id="ctx-term-clear">
+          <span>🧹 Clear Terminal</span>
+        </button>
+      `;
+      document.body.appendChild(menu);
+
+      document.addEventListener('click', (e) => {
+        if (!menu.contains(e.target)) {
+          menu.classList.remove('open');
+        }
+      });
+
+      window.addEventListener('resize', () => menu.classList.remove('open'));
+    }
+    return menu;
   }
 }
 
