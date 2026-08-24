@@ -11,6 +11,7 @@
     "generate:icons:terminal": "electron scripts/generate-terminal-icons.js",
     "register:context-menu": "node scripts/setup-context-menu.js",
     "unregister:context-menu": "node scripts/remove-context-menu.js",
+    "fix:shortcut": "node scripts/fix-desktop-shortcut.js",
     "build:win": "electron-builder --win",
     "build:win:portable": "electron-builder --win portable",
     "build:all": "electron-builder -mwl",
@@ -20,6 +21,10 @@
     "appId": "com.gitnexus.desktop",
     "productName": "Git Nexus",
     "copyright": "Copyright © 2026 Git Nexus",
+    "asar": true,
+    "asarUnpack": [
+      "assets/**/*"
+    ],
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -90,6 +95,6 @@
   },
   "devDependencies": {
     "electron": "^34.2.0",
-    "electron-builder": "^26.0.0"
+    "electron-builder": "^25.1.8"
   }
 }

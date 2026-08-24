@@ -13,7 +13,11 @@ class ContextMenuService {
     if (app && app.isPackaged) {
       return process.execPath;
     }
-    // In development mode: electron.exe
+    // In development mode: electron.exe from node_modules
+    const devElectron = path.resolve(__dirname, '../../node_modules/electron/dist/electron.exe');
+    if (fs.existsSync(devElectron)) {
+      return devElectron;
+    }
     return process.execPath;
   }
 
@@ -28,7 +32,40 @@ class ContextMenuService {
   }
 
   getIconPath() {
-    return path.resolve(__dirname, '../../assets/terminal-icon.ico');
+    const defaultDevPath = path.resolve(__dirname, '../../assets/terminal-icon.ico');
+
+    // In packaged app (inside asar), Windows Shell/Registry cannot read files inside app.asar.
+    if (app && app.isPackaged) {
+      // Check asar.unpacked first
+      const unpackedPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'assets', 'terminal-icon.ico');
+      if (fs.existsSync(unpackedPath)) {
+        return unpackedPath;
+      }
+
+      // Check resources/assets
+      const resourcesPath = path.join(process.resourcesPath, 'assets', 'terminal-icon.ico');
+      if (fs.existsSync(resourcesPath)) {
+        return resourcesPath;
+      }
+
+      // Extract to userData directory so Windows OS has a guaranteed physical icon file on disk
+      try {
+        const userDataIcon = path.join(app.getPath('userData'), 'icons', 'terminal-icon.ico');
+        if (!fs.existsSync(userDataIcon)) {
+          fs.mkdirSync(path.dirname(userDataIcon), { recursive: true });
+          if (fs.existsSync(defaultDevPath)) {
+            fs.writeFileSync(userDataIcon, fs.readFileSync(defaultDevPath));
+          }
+        }
+        if (fs.existsSync(userDataIcon)) {
+          return userDataIcon;
+        }
+      } catch (e) {
+        console.error('Failed to extract terminal icon to userData:', e);
+      }
+    }
+
+    return defaultDevPath;
   }
 
   async register() {
@@ -106,6 +143,7 @@ class ContextMenuService {
       const isPackaged = Boolean(app && app.isPackaged);
       const args = isPackaged ? '--terminal' : `"${projectRoot}" --terminal`;
       const iconPath = this.getIconPath();
+      const workingDir = process.env.USERPROFILE || 'C:\\Users\\Public';
 
       const psScript = [
         `$WshShell = New-Object -ComObject WScript.Shell`,
@@ -114,8 +152,11 @@ class ContextMenuService {
         `$Shortcut.Arguments = '${args.replace(/'/g, "''")}'`,
         `$Shortcut.IconLocation = '${iconPath.replace(/'/g, "''")},0'`,
         `$Shortcut.Description = 'Git Nexus - Integrated Multi-Tab Terminal'`,
-        `$Shortcut.WorkingDirectory = '$HOME'`,
-        `$Shortcut.Save()`
+        `$Shortcut.WorkingDirectory = '${workingDir.replace(/'/g, "''")}'`,
+        `$Shortcut.Save()`,
+        `[System.Runtime.InteropServices.Marshal]::ReleaseComObject($WshShell) | Out-Null`,
+        `Add-Type -TypeDefinition @"\r\nusing System;\r\nusing System.Runtime.InteropServices;\r\npublic class ShellRefresh {\r\n    [DllImport("shell32.dll")]\r\n    public static extern void SHChangeNotify(int wEventId, int uFlags, IntPtr dwItem1, IntPtr dwItem2);\r\n}\r\n"@ -ErrorAction SilentlyContinue`,
+        `[ShellRefresh]::SHChangeNotify(0x08000000, 0, [IntPtr]::Zero, [IntPtr]::Zero)`
       ].join('\r\n');
 
       const encoded = Buffer.from(psScript, 'utf16le').toString('base64');
