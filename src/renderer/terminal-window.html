@@ -9,14 +9,49 @@
   <link rel="stylesheet" href="../../node_modules/@xterm/xterm/css/xterm.css">
   <link rel="stylesheet" href="styles.css">
   <style>
+    :root {
+      --term-bg: #300a24;
+      --term-header-bg: linear-gradient(180deg, #3d0c2e 0%, #29061e 100%);
+      --term-tabbar-bg: #24061a;
+      --term-tab-active-bg: #300a24;
+      --term-accent: #e95420;
+      --term-accent-glow: rgba(233, 84, 32, 0.4);
+      --term-swatch: linear-gradient(135deg, #e95420, #77216f);
+      --term-fg: #dfdbd2;
+      --term-fg-muted: rgba(255, 255, 255, 0.55);
+      --term-fg-hover: #ffffff;
+      --term-border: rgba(255, 255, 255, 0.12);
+      --term-border-hover: rgba(255, 255, 255, 0.25);
+      --term-pill-bg: rgba(255, 255, 255, 0.08);
+      --term-btn-bg: rgba(255, 255, 255, 0.06);
+      --term-btn-hover-bg: rgba(255, 255, 255, 0.12);
+      --term-tab-bg: rgba(255, 255, 255, 0.04);
+      --term-tab-hover-bg: rgba(255, 255, 255, 0.09);
+      --term-tab-fg: rgba(255, 255, 255, 0.6);
+      --term-tab-fg-hover: #ffffff;
+      --term-tab-active-fg: #ffffff;
+      --term-tab-active-shadow: 0 -2px 6px rgba(0, 0, 0, 0.3);
+      --term-badge-bg: rgba(255, 255, 255, 0.1);
+      --term-menu-bg: #25061b;
+      --term-menu-item-fg: #dfdbd2;
+      --term-menu-item-hover: #380c2a;
+      --term-menu-item-hover-fg: #ffffff;
+      --term-menu-item-active-bg: rgba(255, 255, 255, 0.1);
+      --term-menu-item-active-fg: #ffffff;
+      --term-input-bg: rgba(0, 0, 0, 0.35);
+      --term-input-fg: #ffffff;
+      --term-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    }
+
     body, html {
       margin: 0;
       padding: 0;
       width: 100vw;
       height: 100vh;
       overflow: hidden;
-      background-color: #300a24;
+      background-color: var(--term-bg);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      transition: background-color 0.2s ease;
     }
 
     #standalone-terminal-layout {
@@ -24,14 +59,15 @@
       flex-direction: column;
       height: 100vh;
       width: 100vw;
-      background-color: #300a24;
+      background-color: var(--term-bg);
+      transition: background-color 0.2s ease;
     }
 
     /* Top Control Bar */
     .standalone-header {
       height: 40px;
-      background: linear-gradient(180deg, #3d0c2e 0%, #29061e 100%);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: var(--term-header-bg);
+      border-bottom: 1px solid var(--term-border);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -39,6 +75,7 @@
       gap: 8px;
       user-select: none;
       flex-shrink: 0;
+      transition: background 0.2s ease, border-color 0.2s ease;
     }
 
     .standalone-header-left {
@@ -54,79 +91,29 @@
       justify-content: center;
       width: 26px;
       height: 26px;
-      background: linear-gradient(135deg, #e95420, #77216f);
+      background: var(--term-swatch);
       border-radius: 5px;
       color: #fff;
-      box-shadow: 0 0 8px rgba(233, 84, 32, 0.4);
+      box-shadow: 0 0 8px var(--term-accent-glow);
+      transition: all 0.2s ease;
     }
 
     .standalone-cwd-pill {
       display: flex;
       align-items: center;
       gap: 6px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: var(--term-pill-bg);
+      border: 1px solid var(--term-border);
       padding: 3px 8px;
       border-radius: 4px;
       font-size: 11px;
       font-weight: 500;
-      color: #dfdbd2;
+      color: var(--term-fg);
       max-width: 220px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-    }
-
-    .standalone-header-chips {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      overflow-x: auto;
-      overflow-y: hidden;
-      flex: 1;
-      min-width: 0;
-      padding: 3px 4px;
-      scroll-behavior: smooth;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(233, 84, 32, 0.45) transparent;
-    }
-
-    .standalone-header-chips::-webkit-scrollbar {
-      height: 3px;
-    }
-
-    .standalone-header-chips::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    .standalone-header-chips::-webkit-scrollbar-thumb {
-      background: rgba(233, 84, 32, 0.4);
-      border-radius: 2px;
-    }
-
-    .standalone-header-chips::-webkit-scrollbar-thumb:hover {
-      background: rgba(233, 84, 32, 0.75);
-    }
-
-    .cmd-chip {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      color: #dfdbd2;
-      border-radius: 4px;
-      padding: 3px 8px;
-      font-size: 11px;
-      font-family: inherit;
-      cursor: pointer;
-      white-space: nowrap;
-      flex-shrink: 0;
-      user-select: none;
-      transition: all 0.12s ease;
-    }
-
-    .cmd-chip:hover {
-      background: rgba(233, 84, 32, 0.25);
-      border-color: rgba(233, 84, 32, 0.5);
-      color: #ffffff;
+      transition: all 0.2s ease;
     }
 
     .standalone-header-actions {
@@ -137,9 +124,9 @@
     }
 
     .standalone-action-btn {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      color: #dfdbd2;
+      background: var(--term-btn-bg);
+      border: 1px solid var(--term-border);
+      color: var(--term-fg);
       border-radius: 4px;
       padding: 3px 8px;
       font-size: 11px;
@@ -151,22 +138,22 @@
     }
 
     .standalone-action-btn:hover {
-      background: rgba(255, 255, 255, 0.12);
-      border-color: rgba(255, 255, 255, 0.25);
-      color: #ffffff;
+      background: var(--term-btn-hover-bg);
+      border-color: var(--term-border-hover);
+      color: var(--term-fg-hover);
     }
 
     .standalone-action-btn.pinned {
-      background: rgba(233, 84, 32, 0.25);
-      border-color: #e95420;
-      color: #ffffff;
-      box-shadow: 0 0 6px rgba(233, 84, 32, 0.4);
+      background: var(--term-accent-glow);
+      border-color: var(--term-accent);
+      color: var(--term-fg-hover);
+      box-shadow: 0 0 6px var(--term-accent-glow);
     }
 
     /* Tab Bar */
     .terminal-tab-bar {
-      background: #24061a;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: var(--term-tabbar-bg);
+      border-bottom: 1px solid var(--term-border);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -175,6 +162,7 @@
       flex-shrink: 0;
       user-select: none;
       min-height: 31px;
+      transition: background 0.2s ease, border-color 0.2s ease;
     }
 
     .terminal-tabs-container {
@@ -196,9 +184,9 @@
       padding: 5px 10px;
       font-size: 11px;
       font-weight: 500;
-      color: rgba(255, 255, 255, 0.6);
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--term-tab-fg);
+      background: var(--term-tab-bg);
+      border: 1px solid var(--term-border);
       border-bottom: none;
       border-radius: 5px 5px 0 0;
       cursor: pointer;
@@ -208,17 +196,17 @@
     }
 
     .term-tab:hover {
-      background: rgba(255, 255, 255, 0.09);
-      color: #fff;
+      background: var(--term-tab-hover-bg);
+      color: var(--term-tab-fg-hover);
     }
 
     .term-tab.active {
-      background: #300a24;
-      color: #ffffff;
-      border-color: rgba(233, 84, 32, 0.4);
-      border-top: 2px solid #e95420;
+      background: var(--term-tab-active-bg);
+      color: var(--term-tab-active-fg);
+      border-color: var(--term-accent-glow);
+      border-top: 2px solid var(--term-accent);
       font-weight: 600;
-      box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--term-tab-active-shadow);
     }
 
     .term-tab-title {
@@ -236,7 +224,7 @@
       border-radius: 50%;
       border: none;
       background: transparent;
-      color: rgba(255, 255, 255, 0.4);
+      color: var(--term-tab-fg);
       cursor: pointer;
       padding: 0;
       font-size: 10px;
@@ -244,8 +232,8 @@
     }
 
     .term-tab-close:hover {
-      background: rgba(233, 84, 32, 0.4);
-      color: #fff;
+      background: var(--term-accent-glow);
+      color: var(--term-tab-active-fg);
     }
 
     .btn-add-tab {
@@ -254,9 +242,9 @@
       gap: 4px;
       padding: 4px 9px;
       font-size: 11px;
-      color: rgba(255, 255, 255, 0.7);
+      color: var(--term-fg);
       background: transparent;
-      border: 1px dashed rgba(255, 255, 255, 0.2);
+      border: 1px dashed var(--term-border);
       border-radius: 4px;
       cursor: pointer;
       margin-bottom: 2px;
@@ -265,42 +253,172 @@
     }
 
     .btn-add-tab:hover {
-      background: rgba(255, 255, 255, 0.08);
-      color: #fff;
-      border-color: #e95420;
+      background: var(--term-btn-hover-bg);
+      color: var(--term-fg-hover);
+      border-color: var(--term-accent);
     }
 
     .tab-shortcut-badge {
       font-size: 9px;
-      opacity: 0.55;
+      opacity: 0.7;
       padding: 1px 4px;
-      background: rgba(255, 255, 255, 0.1);
+      background: var(--term-badge-bg);
       border-radius: 3px;
       margin-left: 2px;
+      color: var(--term-fg);
     }
 
     /* Dropdown Menus */
-    .system-term-dropdown {
+    .system-term-dropdown, .theme-dropdown {
       position: relative;
     }
 
-    .system-term-menu {
+    .system-term-menu, .theme-menu {
       display: none;
       position: absolute;
       top: 100%;
       right: 0;
       margin-top: 4px;
-      background: #25061b;
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: var(--term-menu-bg);
+      border: 1px solid var(--term-border);
       border-radius: 6px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      box-shadow: var(--term-shadow);
       z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .system-term-menu {
       min-width: 190px;
       padding: 4px;
     }
 
     .system-term-menu.open {
-      display: block;
+      display: block !important;
+      animation: menuFadeIn 0.12s ease-out;
+    }
+
+    .theme-menu {
+      min-width: 240px;
+      max-height: 420px;
+      padding: 6px;
+    }
+
+    .theme-menu.open {
+      display: flex !important;
+      flex-direction: column;
+      animation: menuFadeIn 0.12s ease-out;
+    }
+
+    @keyframes menuFadeIn {
+      from { opacity: 0; transform: translateY(-3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .theme-menu-header-bar {
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--term-border);
+      margin-bottom: 4px;
+    }
+
+    .theme-menu-header {
+      font-size: 9.5px;
+      color: var(--term-accent);
+      font-weight: 700;
+      padding: 2px 4px 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .theme-search-input {
+      width: 100%;
+      box-sizing: border-box;
+      background: var(--term-input-bg);
+      border: 1px solid var(--term-border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 11px;
+      color: var(--term-input-fg);
+      outline: none;
+      transition: border-color 0.12s, box-shadow 0.12s;
+    }
+
+    .theme-search-input:focus {
+      border-color: var(--term-accent);
+      box-shadow: 0 0 6px var(--term-accent-glow);
+    }
+
+    .theme-menu-list {
+      max-height: 320px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--term-accent-glow) transparent;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .theme-menu-list::-webkit-scrollbar {
+      width: 4px;
+    }
+    .theme-menu-list::-webkit-scrollbar-thumb {
+      background: var(--term-accent-glow);
+      border-radius: 2px;
+    }
+
+    .theme-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      font-size: 11.5px;
+      color: var(--term-menu-item-fg);
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      box-sizing: border-box;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .theme-menu-item:hover {
+      background: var(--term-menu-item-hover);
+      color: var(--term-menu-item-hover-fg);
+    }
+
+    .theme-menu-item.active {
+      background: var(--term-menu-item-active-bg);
+      color: var(--term-menu-item-active-fg);
+      font-weight: 600;
+    }
+
+    .theme-swatch-circle {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1px solid var(--term-border);
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+      flex-shrink: 0;
+    }
+
+    .theme-name-label {
+      flex: 1;
+      white-space: nowrap;
+    }
+
+    .theme-active-icon {
+      font-size: 12px;
+      color: var(--term-accent);
+      opacity: 0;
+      font-weight: 700;
+    }
+
+    .theme-menu-item.active .theme-active-icon {
+      opacity: 1;
     }
 
     .system-term-item {
@@ -309,7 +427,7 @@
       gap: 8px;
       padding: 7px 10px;
       font-size: 11.5px;
-      color: #dfdbd2;
+      color: var(--term-menu-item-fg);
       background: transparent;
       border: none;
       border-radius: 4px;
@@ -320,18 +438,19 @@
     }
 
     .system-term-item:hover {
-      background: #380c2a;
-      color: #ffffff;
+      background: var(--term-menu-item-hover);
+      color: var(--term-menu-item-hover-fg);
     }
 
     /* Terminal Viewports Container */
     #standalone-terminal-container {
       flex: 1;
       position: relative;
-      background-color: #300a24;
+      background-color: var(--term-bg);
       overflow: hidden;
       width: 100%;
       height: calc(100vh - 71px);
+      transition: background-color 0.2s ease;
     }
 
     .tab-viewport {
@@ -345,6 +464,7 @@
       width: 100%;
       height: 100%;
       box-sizing: border-box;
+      background-color: var(--term-bg);
     }
 
     .tab-viewport.active {
@@ -357,7 +477,7 @@
     }
 
     .tab-viewport .xterm-viewport {
-      background-color: #300a24 !important;
+      background-color: var(--term-bg) !important;
     }
   </style>
 </head>
@@ -380,19 +500,6 @@
         </div>
       </div>
 
-      <!-- Quick Command Chips -->
-      <div id="standalone-chips-bar" class="standalone-header-chips">
-        <button class="cmd-chip ubuntu-chip" data-cmd="git status" title="Show working tree status">git status</button>
-        <button class="cmd-chip ubuntu-chip" data-cmd="git log --oneline -n 10" title="Compact commit history">git log</button>
-        <button class="cmd-chip ubuntu-chip" data-cmd="git branch -a" title="List all branches">git branch -a</button>
-        <button class="cmd-chip ubuntu-chip" data-cmd="git diff" title="Show working changes">git diff</button>
-        <button class="cmd-chip ubuntu-chip" data-cmd="git add ." title="Stage all changes">git add .</button>
-        <button class="cmd-chip ubuntu-chip" data-cmd="git commit -m &quot;&quot;" title="Commit staged changes">git commit</button>
-        <button class="cmd-chip ubuntu-chip" data-cmd="git push origin" title="Push to remote">git push</button>
-        <button class="cmd-chip ubuntu-chip" data-cmd="git pull origin" title="Pull from remote">git pull</button>
-        <button class="cmd-chip ubuntu-chip" data-cmd="git stash" title="Save uncommitted changes">git stash</button>
-      </div>
-
       <!-- Window Actions -->
       <div class="standalone-header-actions">
         <!-- Clear Button -->
@@ -403,6 +510,32 @@
           </svg>
           <span>Clear</span>
         </button>
+
+        <!-- Theme Selector Dropdown -->
+        <div class="theme-dropdown">
+          <button id="btn-standalone-theme" class="standalone-action-btn" title="Change Terminal Color Theme">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"></path>
+            </svg>
+            <span id="current-theme-label">Ubuntu Dark</span>
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div id="standalone-theme-menu" class="theme-menu">
+            <div class="theme-menu-header-bar">
+              <div class="theme-menu-header">
+                <span>Color Themes</span>
+                <span id="theme-count-badge" style="font-size: 9px; opacity: 0.65; font-weight: 500;"></span>
+              </div>
+              <input type="text" id="theme-search-input" class="theme-search-input" placeholder="Search themes (e.g. Catppuccin, Gruvbox)..." autocomplete="off" spellcheck="false" />
+            </div>
+            <div class="theme-menu-list" id="theme-menu-list">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
 
         <!-- Always on Top Toggle -->
         <button id="btn-standalone-pin" class="standalone-action-btn" title="Pin window on top of other apps">
@@ -425,7 +558,7 @@
             </svg>
           </button>
           <div id="standalone-system-menu" class="system-term-menu">
-            <div style="font-size: 9.5px; color: #e95420; font-weight: 700; padding: 3px 8px; text-transform: uppercase; letter-spacing: 0.5px;">External Shells</div>
+            <div style="font-size: 9.5px; color: var(--term-accent); font-weight: 700; padding: 3px 8px; text-transform: uppercase; letter-spacing: 0.5px;">External Shells</div>
             <button class="system-term-item" data-action="external-term" data-type="git-bash">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="6" y1="3" x2="6" y2="15"></line>
@@ -457,8 +590,8 @@
               <span>Command Prompt (CMD)</span>
             </button>
 
-            <div style="border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 4px 0;"></div>
-            <div style="font-size: 9.5px; color: #e95420; font-weight: 700; padding: 3px 8px; text-transform: uppercase; letter-spacing: 0.5px;">Shortcuts &amp; Access</div>
+            <div style="border-top: 1px solid var(--term-border); margin: 4px 0;"></div>
+            <div style="font-size: 9.5px; color: var(--term-accent); font-weight: 700; padding: 3px 8px; text-transform: uppercase; letter-spacing: 0.5px;">Shortcuts &amp; Access</div>
             <button class="system-term-item" data-action="create-shortcut">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
@@ -475,15 +608,6 @@
             </button>
           </div>
         </div>
-
-        <!-- Close Window Button -->
-        <button id="btn-standalone-close" class="standalone-action-btn" title="Close Terminal Window">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-          <span>Close</span>
-        </button>
       </div>
     </div>
 
