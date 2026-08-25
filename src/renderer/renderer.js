@@ -1561,12 +1561,20 @@ document.addEventListener('DOMContentLoaded', async () => {
               <span>${dateInfo.relStr}</span>
             </span>
             <span class="graph-commit-hash" title="Commit SHA: ${c.hash}">${shortHash}</span>
-            <button class="branch-action-mini-btn btn-row-checkout-commit" title="Checkout commit ${shortHash}">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="9 14 4 9 9 4"></polyline>
-                <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
-              </svg>
-            </button>
+            <div class="commit-action-btn-group">
+              <button class="branch-action-mini-btn btn-row-checkout-commit" title="Checkout commit ${shortHash}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 14 4 9 9 4"></polyline>
+                  <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+                </svg>
+              </button>
+              <button class="branch-action-mini-btn btn-row-copy-hash" title="Copy full SHA">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       `;
@@ -1576,6 +1584,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnRowCheckout.addEventListener('click', (e) => {
           e.stopPropagation();
           openCheckoutCommitModal(c);
+        });
+      }
+
+      const btnRowCopy = rowEl.querySelector('.btn-row-copy-hash');
+      if (btnRowCopy) {
+        btnRowCopy.addEventListener('click', (e) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(c.hash);
+          showToast(`Copied SHA: ${shortHash}`, 'info');
         });
       }
 
@@ -1784,19 +1801,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
           </div>
           <div class="gh-commit-right">
-            <button class="btn-hash-pill" title="View commit changes">${shortHash}</button>
-            <button class="branch-btn-icon btn-gh-checkout-commit" title="Checkout commit ${shortHash}">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="9 14 4 9 9 4"></polyline>
-                <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+            <button class="btn-hash-pill" title="View commit changes (${shortHash})">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="opacity: 0.85;">
+                <circle cx="12" cy="12" r="4"></circle>
+                <line x1="1.05" y1="12" x2="7" y2="12"></line>
+                <line x1="17.01" y1="12" x2="22.96" y2="12"></line>
               </svg>
+              <span>${shortHash}</span>
             </button>
-            <button class="branch-btn-icon btn-gh-copy-hash" title="Copy full SHA">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-            </button>
+            <div class="commit-action-btn-group">
+              <button class="branch-btn-icon btn-gh-checkout-commit" title="Checkout commit ${shortHash} (Switch / Detached HEAD)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 14 4 9 9 4"></polyline>
+                  <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+                </svg>
+              </button>
+              <button class="branch-btn-icon btn-gh-copy-hash" title="Copy full SHA (${commit.hash})">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+            </div>
           </div>
         `;
 
@@ -1951,8 +1977,20 @@ document.addEventListener('DOMContentLoaded', async () => {
           <button id="btn-file-prev" class="btn" style="padding: 2px 8px; font-size: 11px;" ${state.currentCommitFileIndex === 0 ? 'disabled' : ''}>← Prev</button>
           <button id="btn-file-next" class="btn" style="padding: 2px 8px; font-size: 11px;" ${state.currentCommitFileIndex >= files.length - 1 ? 'disabled' : ''}>Next →</button>
         ` : `
-          <button id="btn-stream-expand-all" class="btn" style="padding: 2px 8px; font-size: 11px;">▼ Expand All</button>
-          <button id="btn-stream-collapse-all" class="btn" style="padding: 2px 8px; font-size: 11px;">▶ Collapse All</button>
+          <button id="btn-stream-expand-all" class="btn-diff-action" title="Expand all file diffs">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="7 13 12 18 17 13"></polyline>
+              <polyline points="7 6 12 11 17 6"></polyline>
+            </svg>
+            <span>Expand All</span>
+          </button>
+          <button id="btn-stream-collapse-all" class="btn-diff-action" title="Collapse all file diffs">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="7 11 12 6 17 11"></polyline>
+              <polyline points="7 18 12 13 17 18"></polyline>
+            </svg>
+            <span>Collapse All</span>
+          </button>
         `}
       </div>
     `;
@@ -2013,7 +2051,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         commitDiffsStream.appendChild(warning);
       }
 
-      const autoExpandCount = files.length <= 10 ? files.length : 3;
+      const autoExpandCount = files.length <= 15 ? files.length : 5;
 
       files.forEach((file, index) => {
         const shouldExpand = index < autoExpandCount;
@@ -2023,10 +2061,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
 
       toolbar.querySelector('#btn-stream-expand-all').addEventListener('click', async () => {
-        const cards = commitDiffsStream.querySelectorAll('.file-diff-card');
-        for (const c of cards) {
-          await expandCard(c);
-        }
+        const cards = Array.from(commitDiffsStream.querySelectorAll('.file-diff-card'));
+        await Promise.all(cards.map(c => expandCard(c)));
       });
 
       toolbar.querySelector('#btn-stream-collapse-all').addEventListener('click', () => {
@@ -2076,7 +2112,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             ${dirPart ? `<span class="diff-path-dir">${escapeHtml(dirPart)}</span>` : ''}<span class="diff-path-name">${escapeHtml(filePart)}</span>
           </div>
           <button class="branch-btn-icon btn-copy-filepath" title="Copy file path">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
             </svg>
@@ -2171,7 +2207,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     card.innerHTML = `
       <div class="file-diff-card-header" title="Click to ${isExpanded ? 'collapse' : 'expand'}">
         <div class="file-diff-card-title">
-          <span class="diff-toggle-chevron ${isExpanded ? '' : 'is-collapsed'}">
+          <span class="diff-toggle-chevron">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
@@ -2181,12 +2217,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             ${dirPart ? `<span class="diff-path-dir">${escapeHtml(dirPart)}</span>` : ''}<span class="diff-path-name">${escapeHtml(filePart)}</span>
           </div>
           <button class="branch-btn-icon btn-copy-filepath" title="Copy file path">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
             </svg>
           </button>
-          <span class="collapsed-status-tag" style="display: ${isExpanded ? 'none' : 'inline-flex'};">Collapsed</span>
+          <span class="collapsed-status-tag">Collapsed</span>
         </div>
         <div class="file-diff-card-actions">
           <button class="btn btn-file-history-card" title="View file history">
@@ -2204,7 +2240,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
         </div>
       </div>
-      <div class="file-diff-card-body" style="display: ${isExpanded ? 'block' : 'none'};">
+      <div class="file-diff-card-body">
         ${preloadedDiff ? '' : '<div style="padding: 16px; color: var(--text-muted);">Loading file diff...</div>'}
       </div>
     `;
@@ -2234,7 +2270,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const header = card.querySelector('.file-diff-card-header');
     header.addEventListener('click', async (e) => {
       if (e.target.closest('button')) return;
-      if (card.classList.contains('collapsed') || bodyEl.style.display === 'none') {
+      if (card.classList.contains('collapsed')) {
         await expandCard(card);
       } else {
         collapseCard(card);
@@ -2247,16 +2283,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Expand Diff Card and Fetch Content if not loaded
   async function expandCard(card) {
     if (!card) return;
-    const bodyEl = card.querySelector('.file-diff-card-body');
-    const chevron = card.querySelector('.diff-toggle-chevron');
     const header = card.querySelector('.file-diff-card-header');
-    const statusTag = card.querySelector('.collapsed-status-tag');
     const filePath = card.dataset.filePath;
 
     card.classList.remove('collapsed');
-    bodyEl.style.display = 'block';
-    if (chevron) chevron.classList.remove('is-collapsed');
-    if (statusTag) statusTag.style.display = 'none';
     if (header) header.title = 'Click to collapse';
 
     if (card.dataset.loaded !== 'true' && filePath) {
@@ -2267,15 +2297,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Collapse Diff Card
   function collapseCard(card) {
     if (!card) return;
-    const bodyEl = card.querySelector('.file-diff-card-body');
-    const chevron = card.querySelector('.diff-toggle-chevron');
     const header = card.querySelector('.file-diff-card-header');
-    const statusTag = card.querySelector('.collapsed-status-tag');
 
     card.classList.add('collapsed');
-    bodyEl.style.display = 'none';
-    if (chevron) chevron.classList.add('is-collapsed');
-    if (statusTag) statusTag.style.display = 'inline-flex';
     if (header) header.title = 'Click to expand';
   }
 
