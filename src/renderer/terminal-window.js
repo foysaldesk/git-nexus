@@ -1842,8 +1842,183 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // System Terminals Dropdown
   if (btnSystem && systemMenu) {
+    const renderSystemMenuForOS = async () => {
+      let isMac = window.navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      let isWin = window.navigator.platform.toUpperCase().indexOf('WIN') >= 0;
+
+      try {
+        if (window.api && window.api.getAppInfo) {
+          const info = await window.api.getAppInfo();
+          isMac = info.platform === 'macOS' || info.platform === 'darwin';
+          isWin = info.platform === 'Windows' || info.platform === 'win32';
+        }
+      } catch (e) { /* fallback to navigator */ }
+
+      let isReg = false;
+      try {
+        if (window.api && window.api.isContextMenuRegistered) {
+          isReg = await window.api.isContextMenuRegistered();
+        }
+      } catch (e) {}
+
+      let html = '';
+      if (isMac) {
+        const cmLabel = isReg ? 'Remove Finder Quick Action' : 'Add Finder Quick Action';
+        html = `
+          <div style="font-size: 9.5px; color: var(--term-accent); font-weight: 700; padding: 3px 8px; text-transform: uppercase; letter-spacing: 0.5px;">External Shells</div>
+          <button class="system-term-item" data-action="external-term" data-type="terminal-app">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+            <span>macOS Terminal</span>
+          </button>
+          <button class="system-term-item" data-action="external-term" data-type="iterm">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+            <span>iTerm2</span>
+          </button>
+          <button class="system-term-item" data-action="external-term" data-type="warp">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+            <span>Warp Terminal</span>
+          </button>
+
+          <div style="border-top: 1px solid var(--term-border); margin: 4px 0;"></div>
+          <div style="font-size: 9.5px; color: var(--term-accent); font-weight: 700; padding: 3px 8px; text-transform: uppercase; letter-spacing: 0.5px;">Shortcuts &amp; Access</div>
+          <button class="system-term-item" data-action="create-shortcut">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+            <span>Create Desktop Launcher (.command)</span>
+          </button>
+          <button class="system-term-item" data-action="toggle-context-menu">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span id="label-context-menu">${cmLabel}</span>
+          </button>
+        `;
+      } else if (isWin) {
+        const cmLabel = isReg ? 'Remove Right-Click Context Menu' : 'Add Right-Click Context Menu';
+        html = `
+          <div style="font-size: 9.5px; color: var(--term-accent); font-weight: 700; padding: 3px 8px; text-transform: uppercase; letter-spacing: 0.5px;">External Shells</div>
+          <button class="system-term-item" data-action="external-term" data-type="git-bash">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="6" y1="3" x2="6" y2="15"></line>
+              <circle cx="18" cy="6" r="3"></circle>
+              <circle cx="6" cy="18" r="3"></circle>
+              <path d="M18 9a9 9 0 0 1-9 9"></path>
+            </svg>
+            <span>Git Bash</span>
+          </button>
+          <button class="system-term-item" data-action="external-term" data-type="wt">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+            <span>Windows Terminal</span>
+          </button>
+          <button class="system-term-item" data-action="external-term" data-type="powershell">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="7 8 11 12 7 16"></polyline>
+              <line x1="13" y1="16" x2="17" y2="16"></line>
+            </svg>
+            <span>PowerShell</span>
+          </button>
+          <button class="system-term-item" data-action="external-term" data-type="cmd">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+            <span>Command Prompt (CMD)</span>
+          </button>
+
+          <div style="border-top: 1px solid var(--term-border); margin: 4px 0;"></div>
+          <div style="font-size: 9.5px; color: var(--term-accent); font-weight: 700; padding: 3px 8px; text-transform: uppercase; letter-spacing: 0.5px;">Shortcuts &amp; Access</div>
+          <button class="system-term-item" data-action="create-shortcut">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+            <span>Create Desktop Shortcut</span>
+          </button>
+          <button class="system-term-item" data-action="toggle-context-menu">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span id="label-context-menu">${cmLabel}</span>
+          </button>
+        `;
+      } else {
+        html = `
+          <div style="font-size: 9.5px; color: var(--term-accent); font-weight: 700; padding: 3px 8px; text-transform: uppercase; letter-spacing: 0.5px;">External Shells</div>
+          <button class="system-term-item" data-action="external-term" data-type="default">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+            <span>System Terminal</span>
+          </button>
+
+          <div style="border-top: 1px solid var(--term-border); margin: 4px 0;"></div>
+          <div style="font-size: 9.5px; color: var(--term-accent); font-weight: 700; padding: 3px 8px; text-transform: uppercase; letter-spacing: 0.5px;">Shortcuts &amp; Access</div>
+          <button class="system-term-item" data-action="create-shortcut">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+            <span>Create Desktop Entry (.desktop)</span>
+          </button>
+        `;
+      }
+
+      systemMenu.innerHTML = html;
+
+      // Re-bind item listeners
+      systemMenu.querySelectorAll('.system-term-item').forEach(item => {
+        item.addEventListener('click', async () => {
+          const action = item.getAttribute('data-action');
+          systemMenu.classList.remove('open');
+
+          if (action === 'create-shortcut') {
+            if (window.api.createDesktopShortcut) {
+              const res = await window.api.createDesktopShortcut();
+              alert(res.message || res.error);
+            }
+          } else if (action === 'toggle-context-menu') {
+            if (window.api.isContextMenuRegistered) {
+              const isCurrentlyReg = await window.api.isContextMenuRegistered();
+              if (isCurrentlyReg) {
+                const res = await window.api.unregisterContextMenu();
+                alert(res.message || 'Removed from context menu');
+              } else {
+                const res = await window.api.registerContextMenu();
+                alert(res.message || 'Added to context menu');
+              }
+              await renderSystemMenuForOS();
+            }
+          } else {
+            const type = item.getAttribute('data-type');
+            await window.api.openSystemTerminal(manager.currentCwd, type);
+          }
+        });
+      });
+    };
+
+    renderSystemMenuForOS();
+
     btnSystem.addEventListener('click', (e) => {
       e.stopPropagation();
+      renderSystemMenuForOS();
       systemMenu.classList.toggle('open');
     });
 
@@ -1851,45 +2026,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!systemMenu.contains(e.target) && e.target !== btnSystem) {
         systemMenu.classList.remove('open');
       }
-    });
-
-    // Update context menu label based on current status
-    const updateContextMenuStatus = async () => {
-      if (window.api.isContextMenuRegistered) {
-        const isReg = await window.api.isContextMenuRegistered();
-        const lbl = document.getElementById('label-context-menu');
-        if (lbl) lbl.textContent = isReg ? 'Remove Right-Click Context Menu' : 'Add Right-Click Context Menu';
-      }
-    };
-    updateContextMenuStatus();
-
-    systemMenu.querySelectorAll('.system-term-item').forEach(item => {
-      item.addEventListener('click', async () => {
-        const action = item.getAttribute('data-action');
-        systemMenu.classList.remove('open');
-
-        if (action === 'create-shortcut') {
-          if (window.api.createDesktopShortcut) {
-            const res = await window.api.createDesktopShortcut();
-            alert(res.message || res.error);
-          }
-        } else if (action === 'toggle-context-menu') {
-          if (window.api.isContextMenuRegistered) {
-            const isReg = await window.api.isContextMenuRegistered();
-            if (isReg) {
-              const res = await window.api.unregisterContextMenu();
-              alert(res.message || 'Removed from context menu');
-            } else {
-              const res = await window.api.registerContextMenu();
-              alert(res.message || 'Added to context menu');
-            }
-            await updateContextMenuStatus();
-          }
-        } else {
-          const type = item.getAttribute('data-type');
-          await window.api.openSystemTerminal(manager.currentCwd, type);
-        }
-      });
     });
   }
 

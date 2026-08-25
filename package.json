@@ -14,6 +14,7 @@
     "fix:shortcut": "node scripts/fix-desktop-shortcut.js",
     "build:win": "electron-builder --win",
     "build:win:portable": "electron-builder --win portable",
+    "build:mac": "electron-builder --mac",
     "build:all": "electron-builder -mwl",
     "dist": "electron-builder"
   },

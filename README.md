@@ -81,6 +81,9 @@ npm start
 To package and build installer executables using `electron-builder`:
 
 ```bash
+# Build for macOS (.dmg)
+npm run build:mac
+
 # Build for Windows (NSIS installer .exe & Portable .exe)
 npm run build:win
 

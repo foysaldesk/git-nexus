@@ -45,7 +45,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnFileHistoryQuick = document.getElementById('btn-file-history-quick');
   const btnToggleTerminal = document.getElementById('btn-toggle-terminal');
   const btnOpenErrorLogs = document.getElementById('btn-open-error-logs');
+  const btnAbout = document.getElementById('btn-about');
+  const brandSection = document.getElementById('brand-section');
   const headerErrorBadge = document.getElementById('header-error-badge');
+
+  // About Modal Elements
+  const modalAbout = document.getElementById('modal-about');
+  const btnToggleContextMenuAbout = document.getElementById('btn-toggle-context-menu-about');
+  const aboutAppVersionBadge = document.getElementById('about-app-version-badge');
+  const aboutElectronVer = document.getElementById('about-electron-ver');
+  const aboutNodeVer = document.getElementById('about-node-ver');
+  const aboutPlatformName = document.getElementById('about-platform-name');
+  const cmBoxTitle = document.getElementById('cm-box-title');
+  const cmBoxDesc = document.getElementById('cm-box-desc');
 
   // Error Logs Modal Elements
   const modalErrorLogs = document.getElementById('modal-error-logs');
@@ -794,6 +806,91 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Hook Logs Toolbar Controls
   if (btnOpenErrorLogs) {
     btnOpenErrorLogs.addEventListener('click', openErrorLogsModal);
+  }
+
+  // Hook About Modal Controls
+  async function updateAboutModalInfo() {
+    try {
+      if (window.api && window.api.getAppInfo) {
+        const info = await window.api.getAppInfo();
+        if (aboutAppVersionBadge) aboutAppVersionBadge.textContent = `v${info.version}`;
+        if (aboutElectronVer) aboutElectronVer.textContent = `v${info.electron}`;
+        if (aboutNodeVer) aboutNodeVer.textContent = `v${info.node}`;
+        if (aboutPlatformName) aboutPlatformName.textContent = info.platform;
+      }
+    } catch (e) {
+      console.warn('Failed to load app info:', e);
+    }
+
+    try {
+      if (window.api && window.api.isContextMenuRegistered) {
+        const isReg = await window.api.isContextMenuRegistered();
+        const isMac = window.navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        
+        if (cmBoxTitle) {
+          cmBoxTitle.textContent = isMac 
+            ? 'macOS Finder Quick Action Integration' 
+            : 'Windows Explorer Context Menu Integration';
+        }
+        if (cmBoxDesc) {
+          cmBoxDesc.textContent = isMac 
+            ? 'Adds "Open in Git Nexus Terminal" to your Finder Quick Actions & Services menu.' 
+            : 'Adds "Open in Git Nexus Terminal" to your Windows Explorer right-click context menu.';
+        }
+        
+        if (btnToggleContextMenuAbout) {
+          if (isReg) {
+            btnToggleContextMenuAbout.textContent = 'Disable Integration';
+            btnToggleContextMenuAbout.className = 'btn btn-sm btn-outline-danger';
+          } else {
+            btnToggleContextMenuAbout.textContent = 'Enable Integration';
+            btnToggleContextMenuAbout.className = 'btn btn-sm btn-primary';
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to check context menu status:', e);
+    }
+  }
+
+  function openAboutModal() {
+    if (modalAbout) {
+      updateAboutModalInfo();
+      modalAbout.classList.add('active');
+    }
+  }
+
+  if (brandSection) brandSection.addEventListener('click', openAboutModal);
+  if (btnAbout) btnAbout.addEventListener('click', openAboutModal);
+
+  if (btnToggleContextMenuAbout) {
+    btnToggleContextMenuAbout.addEventListener('click', async () => {
+      try {
+        const isReg = await window.api.isContextMenuRegistered();
+        btnToggleContextMenuAbout.disabled = true;
+        
+        if (isReg) {
+          const res = await window.api.unregisterContextMenu();
+          if (res.success) {
+            showToast('Context menu integration removed', 'info');
+          } else {
+            showToast(res.error || 'Failed to remove context menu', 'error');
+          }
+        } else {
+          const res = await window.api.registerContextMenu();
+          if (res.success) {
+            showToast('Context menu integration registered successfully!', 'success');
+          } else {
+            showToast(res.error || 'Failed to register context menu', 'error');
+          }
+        }
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        btnToggleContextMenuAbout.disabled = false;
+        updateAboutModalInfo();
+      }
+    });
   }
 
   [btnFilterLogsAll, btnFilterLogsErrors, btnFilterLogsSuccess].forEach(btn => {
