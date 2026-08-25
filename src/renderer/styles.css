@@ -452,250 +452,476 @@ header.app-header {
   position: relative;
 }
 
-/* Sidebar */
+/* Sidebar: Explorer & Branches Layout (Matches Reference Mockup) */
 aside.sidebar {
-  width: 280px;
-  min-width: 220px;
-  max-width: 400px;
+  width: 260px;
+  min-width: 200px;
+  max-width: 380px;
   background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  overflow-y: auto;
+  overflow: hidden;
+  user-select: none;
 }
 
-.sidebar-header {
-  padding: 10px 14px 8px;
+/* Top Search Box in Sidebar */
+.sidebar-search-wrapper {
+  padding: 8px 10px 8px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  background-color: var(--bg-sidebar);
+  flex-shrink: 0;
+}
+
+.sidebar-search-box {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  width: 100%;
 }
 
-.sidebar-title {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.sidebar-search-input {
+  width: 100%;
+  height: 28px;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 4px 28px 4px 8px;
+  font-size: 12px;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sidebar-search-input:focus {
+  border-color: var(--border-active);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.sidebar-search-input::placeholder {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.sidebar-search-icon {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.12s ease;
+}
+
+.sidebar-search-clear:hover {
+  color: var(--text-primary);
+}
+
+/* Sidebar Remote Origin URL Strip */
+.sidebar-remote-url-wrapper {
+  padding: 4px 10px 6px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  background-color: var(--bg-sidebar);
+  flex-shrink: 0;
+}
+
+.sidebar-remote-url-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.sidebar-remote-url-box:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent);
+}
+
+.sidebar-remote-url-box.copied {
+  background: rgba(35, 134, 54, 0.12);
+  border-color: #238636;
+}
+
+.sidebar-remote-url-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.sidebar-remote-url-text {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
   color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
-.sidebar-header-actions {
+.sidebar-remote-url-copy-btn {
+  background: transparent;
+  border: none;
+  padding: 2px;
+  color: var(--text-muted);
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  border-radius: 3px;
+  flex-shrink: 0;
+  transition: color 0.12s ease;
 }
 
-.explorer-mode-btn {
+.sidebar-remote-url-box:hover .sidebar-remote-url-copy-btn {
+  color: var(--text-primary);
+}
+
+/* Sidebar Scrollable Tree Container */
+.sidebar-tree-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Accordion Sections */
+.sidebar-accordion-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-accordion-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px 7px 8px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  user-select: none;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.sidebar-accordion-header:hover {
+  background-color: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.accordion-chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+}
+
+.sidebar-accordion-section.collapsed .accordion-chevron {
+  transform: rotate(-90deg);
+}
+
+.sidebar-accordion-section:not(.collapsed) .accordion-chevron {
+  transform: rotate(0deg);
+}
+
+.accordion-icon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.sidebar-accordion-header:hover .accordion-icon {
+  color: var(--text-primary);
+}
+
+.accordion-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.accordion-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+}
+
+.accordion-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  padding: 0;
+}
+
+.accordion-action-btn:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-card);
+}
+
+.accordion-counter {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 7px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.15s ease;
+  padding: 0 5px;
+  border-radius: 8px;
   line-height: 1.3;
 }
 
-.explorer-mode-btn:hover {
-  background: var(--bg-card-hover);
-  color: var(--text-primary);
-  border-color: var(--border-color);
+.sidebar-accordion-body {
+  display: block;
 }
 
-.explorer-mode-btn.active {
-  background: rgba(35, 134, 54, 0.18);
-  color: #3fb950;
-  border-color: rgba(63, 185, 80, 0.45);
-  box-shadow: 0 0 6px rgba(63, 185, 80, 0.15);
+.sidebar-accordion-section.collapsed .sidebar-accordion-body {
+  display: none;
 }
 
-.badge-ahead-mini {
-  background: rgba(35, 134, 54, 0.25);
-  color: #3fb950;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 0 4px;
-  border-radius: 8px;
-  border: 1px solid rgba(63, 185, 80, 0.35);
-  line-height: 1.2;
-}
-
-.section-ahead-badge {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 10px;
-  background: rgba(35, 134, 54, 0.15);
-  color: #3fb950;
-  border: 1px solid rgba(63, 185, 80, 0.3);
-}
-
-.branch-section {
-  padding: 8px 12px;
-}
-
-.branch-section-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  margin-bottom: 6px;
-  padding: 0 4px;
-}
-
-.branch-list {
+/* Branch List & Tree View */
+.branch-tree-list {
   list-style: none;
+  margin: 0;
+  padding: 2px 0 6px 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .branch-item {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 5px 8px 5px 10px;
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
+  min-height: 26px;
+  padding: 3px 10px 3px 26px;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  min-width: 0;
-  border: 1px solid transparent;
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-family: var(--font-sans);
+  line-height: 1.35;
+  transition: background-color 0.1s ease;
+  user-select: none;
   gap: 6px;
 }
 
 .branch-item:hover {
-  background: var(--bg-card-hover);
-  color: var(--text-primary);
+  background-color: var(--bg-card-hover);
 }
 
 .branch-item.active {
-  background: rgba(47, 129, 247, 0.12);
-  color: var(--accent);
-  border-color: rgba(47, 129, 247, 0.35);
-  font-weight: 600;
+  color: var(--text-primary);
+  font-weight: 700;
 }
 
-.branch-item.is-ahead-branch {
-  border-left: 2px solid #3fb950;
-}
-
-.branch-name-box {
+/* Active Branch Circle Bullet 'o' (Matches Reference Mockup) */
+.branch-bullet-icon {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
+  justify-content: center;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
 }
 
-.branch-name-box svg {
-  flex-shrink: 0;
-  color: var(--text-muted);
-  transition: color 0.15s ease;
-}
-
-.branch-item:hover .branch-name-box svg,
-.branch-item.active .branch-name-box svg {
-  color: var(--accent);
+.branch-bullet-circle {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 2px solid var(--text-primary);
+  display: inline-block;
 }
 
 .branch-name-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0;
   flex: 1;
+  min-width: 0;
+  font-family: var(--font-sans);
 }
 
-.branch-status-badges {
+.branch-item.active .branch-name-text {
+  font-weight: 700;
+}
+
+/* Sync Badges (e.g. 1↓, 86↓ - Solid Dark Pill matching Mockup) */
+.branch-sync-badge {
+  margin-left: auto;
+  background-color: #141414;
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  padding: 1px 5px;
+  border-radius: 4px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  letter-spacing: -0.2px;
+  font-family: var(--font-sans);
+}
+
+[data-theme="dark"] .branch-sync-badge {
+  background-color: #000000;
+  border: 1px solid #333333;
+  color: #ffffff;
+}
+
+.branch-sync-badge .sync-arrow {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.branch-badge-ahead-pill {
+  color: #58a6ff;
+}
+
+.branch-badge-behind-pill {
+  color: #ffffff;
+}
+
+.branch-badge-gone-pill {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(248, 81, 73, 0.2);
+  color: #f85149;
+  border: 1px solid rgba(248, 81, 73, 0.4);
+}
+
+.branch-badge-local-pill {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(139, 148, 158, 0.15);
+  color: var(--text-muted);
+}
+
+/* Branch Item Hover Actions */
+.branch-hover-actions {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
   flex-shrink: 0;
 }
 
-.branch-badge-ahead {
-  display: inline-flex;
+.branch-item:hover .branch-hover-actions {
+  display: flex;
+}
+
+.branch-action-mini-btn {
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  display: flex;
   align-items: center;
-  gap: 2px;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 10px;
-  background: rgba(35, 134, 54, 0.18);
-  color: #3fb950;
-  border: 1px solid rgba(63, 185, 80, 0.4);
-  font-family: var(--font-sans);
-  line-height: 1.2;
+  justify-content: center;
+  cursor: pointer;
   transition: all 0.12s ease;
 }
 
-.branch-badge-ahead:hover {
-  background: rgba(35, 134, 54, 0.32);
-  transform: scale(1.05);
+.branch-action-mini-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-panel);
+  border-color: var(--border-color);
+  transform: scale(1.08);
 }
 
-.branch-badge-behind {
-  display: inline-flex;
+.branch-action-mini-btn.delete-btn:hover {
+  color: #fff;
+  background: var(--red);
+  border-color: var(--red);
+}
+
+/* Tag & Remote Tree Items */
+.tag-item, .remote-item {
+  position: relative;
+  display: flex;
   align-items: center;
-  gap: 2px;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 10px;
-  background: rgba(210, 153, 34, 0.18);
-  color: #e3b341;
-  border: 1px solid rgba(227, 179, 65, 0.4);
+  min-height: 26px;
+  padding: 3px 10px 3px 26px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 12.5px;
   font-family: var(--font-sans);
-  line-height: 1.2;
+  line-height: 1.35;
+  transition: background-color 0.1s ease;
+  user-select: none;
+  gap: 6px;
 }
 
-.branch-badge-local {
-  font-size: 9px;
-  font-weight: 600;
-  padding: 1px 5px;
-  border-radius: 8px;
-  background: rgba(139, 148, 158, 0.14);
-  color: var(--text-muted);
-  border: 1px solid rgba(139, 148, 158, 0.25);
-  font-family: var(--font-sans);
-  line-height: 1.2;
+.tag-item:hover, .remote-item:hover {
+  background-color: var(--bg-card-hover);
 }
 
-.branch-badge-gone {
-  font-size: 9px;
-  font-weight: 600;
-  padding: 1px 5px;
-  border-radius: 8px;
-  background: rgba(248, 81, 73, 0.15);
-  color: #f85149;
-  border: 1px solid rgba(248, 81, 73, 0.3);
-  font-family: var(--font-sans);
+.tag-name-text, .remote-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
-.branch-badge-synced {
-  color: #3fb950;
-  opacity: 0.6;
-  font-size: 10px;
-  display: inline-flex;
-  align-items: center;
+.tag-item:hover .branch-hover-actions,
+.remote-item:hover .branch-hover-actions {
+  display: flex;
 }
 
+/* Branch Folder Item for Tree Mode */
 .branch-folder-item {
   list-style: none;
   margin-top: 1px;
@@ -705,10 +931,10 @@ aside.sidebar {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 6px;
+  padding: 4px 8px 4px 26px;
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   user-select: none;
@@ -730,13 +956,13 @@ aside.sidebar {
 }
 
 .branch-folder-children {
-  padding-left: 10px;
+  padding-left: 12px;
   border-left: 1px solid var(--border-subtle);
-  margin-left: 9px;
+  margin-left: 32px;
   margin-top: 2px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .branch-folder-item.collapsed .branch-folder-children {
@@ -751,67 +977,6 @@ aside.sidebar {
   border-radius: 8px;
   margin-left: auto;
   border: 1px solid var(--border-subtle);
-}
-
-.branch-current-badge {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 10px;
-  background: rgba(47, 129, 247, 0.18);
-  color: var(--accent);
-  border: 1px solid rgba(47, 129, 247, 0.35);
-  font-family: var(--font-sans);
-  letter-spacing: 0.5px;
-  flex-shrink: 0;
-  line-height: 1.2;
-}
-
-.branch-item .branch-actions {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  flex-shrink: 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  transform: translateX(4px);
-}
-
-.branch-item:hover .branch-actions {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(0);
-}
-
-.branch-btn-icon {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-  cursor: pointer;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border-radius: var(--radius-sm);
-  transition: all 0.12s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.branch-btn-icon:hover {
-  color: var(--text-primary);
-  background: var(--bg-panel);
-  border-color: var(--border-color);
-  transform: scale(1.08);
-  box-shadow: var(--shadow-sm);
-}
-
-.branch-btn-icon.delete-btn:hover {
-  color: #fff;
-  background: var(--red);
-  border-color: var(--red);
 }
 
 /* Main Content Workspace */
@@ -1431,16 +1596,16 @@ main.workspace-content {
 .git-graph-tree-container {
   flex: 1;
   overflow-y: auto;
-  overflow-x: auto;
-  padding: 12px 16px;
+  overflow-x: hidden;
+  padding: 10px 14px;
   background-color: var(--bg-main);
 }
 
 .git-graph-table {
   display: flex;
   flex-direction: column;
+  width: 100%;
   min-width: 100%;
-  width: max-content;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   background: var(--bg-sidebar);
@@ -1453,12 +1618,14 @@ main.workspace-content {
   align-items: center;
   height: 34px;
   min-height: 34px;
+  width: 100%;
   border-bottom: 1px solid var(--border-subtle);
   cursor: pointer;
   transition: background-color 0.12s ease;
   font-family: var(--font-sans);
   font-size: 12px;
   user-select: none;
+  overflow: hidden;
 }
 
 .graph-row:last-child {
@@ -1500,11 +1667,21 @@ main.workspace-content {
 .graph-info-cell {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   padding-left: 6px;
   padding-right: 14px;
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+}
+
+.graph-commit-left-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .graph-refs-container {
@@ -1566,15 +1743,25 @@ main.workspace-content {
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
-  min-width: 180px;
+  min-width: 0;
+}
+
+.graph-commit-right-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .graph-commit-author {
   color: var(--text-secondary);
   font-size: 11px;
   white-space: nowrap;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   flex-shrink: 0;
-  min-width: 110px;
 }
 
 .graph-commit-date {
@@ -1582,7 +1769,9 @@ main.workspace-content {
   font-size: 11px;
   white-space: nowrap;
   flex-shrink: 0;
-  min-width: 90px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .graph-commit-hash {
@@ -2813,12 +3002,106 @@ main.workspace-content {
 .modal-footer {
   padding: 12px 18px;
   background: var(--bg-panel);
-  border-top: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
   flex-shrink: 0;
+}
+
+/* Checkout Commit Modal Specific Styles */
+.checkout-commit-preview-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checkout-commit-hash-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.checkout-commit-msg {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.checkout-mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.checkout-mode-radio-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.checkout-mode-radio-label:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-active);
+}
+
+.checkout-mode-radio-label.active {
+  border-color: var(--accent);
+  background: rgba(47, 129, 247, 0.08);
+}
+
+.checkout-mode-radio-label input[type="radio"] {
+  margin-top: 3px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.checkout-mode-radio-label .radio-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.checkout-mode-radio-label .radio-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.checkout-mode-radio-label .radio-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+/* History Row Checkout Actions */
+.btn-row-checkout-commit,
+.btn-gh-checkout-commit {
+  opacity: 0.75;
+  transition: all 0.15s ease;
+}
+
+.btn-row-checkout-commit:hover,
+.btn-gh-checkout-commit:hover {
+  opacity: 1;
+  color: var(--accent);
+  background: var(--bg-card-hover);
 }
 
 /* ==========================================================================

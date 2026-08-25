@@ -61,6 +61,57 @@ async function test() {
     console.log('package.json content length:', contentRes.content.length);
   }
 
+  // Test Tags
+  console.log('Testing getTags...');
+  const tagsRes = await gitService.getTags(repoPath);
+  console.log('Existing tags:', tagsRes.data);
+
+  console.log('Testing createTag...');
+  const createTagRes = await gitService.createTag(repoPath, 'test-v999.0', 'Test tag message');
+  console.log('Create tag result:', createTagRes);
+
+  const tagsAfterCreate = await gitService.getTags(repoPath);
+  console.log('Tags after create:', tagsAfterCreate.data.map(t => t.name));
+
+  console.log('Testing deleteTag...');
+  const deleteTagRes = await gitService.deleteTag(repoPath, 'test-v999.0');
+  console.log('Delete tag result:', deleteTagRes);
+
+  // Test checkoutCommit in a clean temporary repository
+  const os = require('os');
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'git-checkout-test-'));
+  try {
+    console.log('Testing checkoutCommit in clean temporary repo at:', tempDir);
+    await gitService.initRepo(tempDir);
+    fs.writeFileSync(path.join(tempDir, 'file.txt'), 'version 1\n');
+    await gitService.stageFiles(tempDir, ['.']);
+    await gitService.commit(tempDir, 'First commit', '');
+
+    fs.writeFileSync(path.join(tempDir, 'file.txt'), 'version 2\n');
+    await gitService.stageFiles(tempDir, ['.']);
+    await gitService.commit(tempDir, 'Second commit', '');
+
+    const tempHistory = await gitService.getHistory(tempDir);
+    const commit1 = tempHistory.data[1];
+    const commit2 = tempHistory.data[0];
+
+    console.log(`Checking out commit 1 (${commit1.shortHash}) in detached HEAD...`);
+    const resDetached = await gitService.checkoutCommit(tempDir, commit1.hash, false);
+    console.log('Detached result:', resDetached);
+
+    const contentAtCommit1 = fs.readFileSync(path.join(tempDir, 'file.txt'), 'utf8');
+    console.log('File content at commit 1:', contentAtCommit1.trim());
+
+    console.log(`Checking out commit 1 (${commit1.shortHash}) as new branch 'feature-from-c1'...`);
+    const resNewBranch = await gitService.checkoutCommit(tempDir, commit1.hash, true, 'feature-from-c1');
+    console.log('New branch result:', resNewBranch);
+
+    const tempBranches = await gitService.getBranches(tempDir);
+    console.log('Branches in temp repo:', tempBranches.data.local.map(b => b.name), 'Current:', tempBranches.data.current);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+
   console.log('\nAll GitService operations successfully validated!');
 }
 

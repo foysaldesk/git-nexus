@@ -28,7 +28,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     operationLogs: [],
     unreadErrorsCount: 0,
     logsFilter: 'all', // 'all' | 'error' | 'success'
-    logsSearchQuery: ''
+    logsSearchQuery: '',
+    sidebarSearchQuery: '',
+    tagsData: []
   };
 
   // Top Header Elements
@@ -63,14 +65,39 @@ document.addEventListener('DOMContentLoaded', async () => {
   const badgeBehind = document.getElementById('badge-behind');
   const repoStatusIndicator = document.getElementById('status-text');
 
-  // Sidebar Elements & Controls
-  const btnFilterAheadView = document.getElementById('btn-filter-ahead-view');
-  const badgeTotalAhead = document.getElementById('badge-total-ahead');
-  const btnToggleBranchTree = document.getElementById('btn-toggle-branch-tree');
-  const localAheadSummary = document.getElementById('local-ahead-summary');
+  // Sidebar Elements & Controls (Matching Reference Mockup)
+  const sidebarSearchInput = document.getElementById('sidebar-search-input');
+  const btnClearSidebarSearch = document.getElementById('btn-clear-sidebar-search');
+  const sidebarRemoteUrlWrapper = document.getElementById('sidebar-remote-url-wrapper');
+  const btnCopyRemoteUrl = document.getElementById('btn-copy-remote-url');
+  const sidebarRemoteUrlText = document.getElementById('sidebar-remote-url-text');
+  const btnCopyRemoteUrlIcon = document.getElementById('btn-copy-remote-url-icon');
+
+  const sectionBranches = document.getElementById('section-branches');
+  const headerBranches = document.getElementById('header-branches');
   const localBranchList = document.getElementById('local-branch-list');
+  const btnToggleBranchTree = document.getElementById('btn-toggle-branch-tree');
+
+  const sectionTags = document.getElementById('section-tags');
+  const headerTags = document.getElementById('header-tags');
+  const tagsList = document.getElementById('tags-list');
+  const tagsCountBadge = document.getElementById('tags-count-badge');
+  const btnAddTagQuick = document.getElementById('btn-add-tag-quick');
+
+  const sectionRemotes = document.getElementById('section-remotes');
+  const headerRemotes = document.getElementById('header-remotes');
   const remoteBranchList = document.getElementById('remote-branch-list');
+  const btnQuickFetchRemotes = document.getElementById('btn-quick-fetch-remotes');
+
+  const sectionRecentRepos = document.getElementById('section-recent-repos');
+  const headerRecentRepos = document.getElementById('header-recent-repos');
   const recentReposList = document.getElementById('recent-repos-list');
+
+  // Tag Modal Elements
+  const modalCreateTag = document.getElementById('modal-create-tag');
+  const inputNewTagName = document.getElementById('input-new-tag-name');
+  const inputNewTagMsg = document.getElementById('input-new-tag-msg');
+  const btnConfirmCreateTag = document.getElementById('btn-confirm-create-tag');
 
   // Workspace Tabs
   const tabChanges = document.getElementById('tab-changes');
@@ -123,6 +150,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const cdParents = document.getElementById('cd-parents');
   const cdHashShort = document.getElementById('cd-hash-short');
   const btnCdCopyHash = document.getElementById('btn-cd-copy-hash');
+  const btnCdCheckoutCommit = document.getElementById('btn-cd-checkout-commit');
   const cdBranchTag = document.getElementById('cd-branch-tag');
   const cdAvatar = document.getElementById('cd-avatar');
   const cdAuthor = document.getElementById('cd-author');
@@ -135,6 +163,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   const inputFilterCommitFiles = document.getElementById('input-filter-commit-files');
   const commitFilesTree = document.getElementById('commit-files-tree');
   const commitDiffsStream = document.getElementById('commit-diffs-stream');
+
+  // Checkout Commit Modal Elements
+  const modalCheckoutCommit = document.getElementById('modal-checkout-commit');
+  const checkoutCommitHashText = document.getElementById('checkout-commit-hash-text');
+  const checkoutCommitAuthorDate = document.getElementById('checkout-commit-author-date');
+  const checkoutCommitMsgText = document.getElementById('checkout-commit-msg-text');
+  const radioCheckoutDetached = document.getElementById('radio-checkout-detached');
+  const radioCheckoutNewBranch = document.getElementById('radio-checkout-new-branch');
+  const labelCheckoutDetached = document.getElementById('label-checkout-detached');
+  const labelCheckoutNewBranch = document.getElementById('label-checkout-new-branch');
+  const groupCheckoutNewBranchName = document.getElementById('group-checkout-new-branch-name');
+  const inputCheckoutNewBranchName = document.getElementById('input-checkout-new-branch-name');
+  const btnConfirmCheckoutCommit = document.getElementById('btn-confirm-checkout-commit');
 
   // File History Modal Elements
   const modalFileHistory = document.getElementById('modal-file-history');
@@ -914,6 +955,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     return date.toLocaleDateString();
   }
 
+  function formatCommitTimestamp(dateStr) {
+    if (!dateStr) return { relStr: '', fullStr: '' };
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return { relStr: String(dateStr), fullStr: String(dateStr) };
+
+    const now = new Date();
+    const diffSec = Math.floor((now - date) / 1000);
+
+    const pad = n => String(n).padStart(2, '0');
+    const fullStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+
+    let relStr = '';
+    if (diffSec < 60) {
+      relStr = 'just now';
+    } else if (diffSec < 3600) {
+      relStr = `${Math.floor(diffSec / 60)}m ago`;
+    } else if (diffSec < 86400) {
+      relStr = `${Math.floor(diffSec / 3600)}h ago`;
+    } else if (diffSec < 604800) {
+      relStr = `${Math.floor(diffSec / 86400)}d ago`;
+    } else {
+      const isCurrentYear = date.getFullYear() === now.getFullYear();
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const m = monthNames[date.getMonth()];
+      const d = date.getDate();
+      const timeStr = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+      relStr = isCurrentYear ? `${d} ${m}, ${timeStr}` : `${d} ${m} ${date.getFullYear()}`;
+    }
+
+    return { relStr, fullStr };
+  }
+
   function formatDateGroup(dateStr) {
     if (!dateStr) return 'Recent Commits';
     const date = new Date(dateStr);
@@ -1013,9 +1086,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     activeRepoPill.style.display = 'flex';
     activeRepoPill.title = repoPath;
 
-    // Update Terminal CWD
-    await window.api.setTerminalCwd(repoPath);
-
     // Populate Datalist for File Search
     populateRepoFilesDatalist();
 
@@ -1055,10 +1125,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
       const selectedBranch = selectHistoryBranch.value || null;
-      const [statusRes, branchesRes, historyRes] = await Promise.all([
-        window.api.getStatus(state.currentRepoPath),
-        window.api.getBranches(state.currentRepoPath),
-        window.api.getHistory(state.currentRepoPath, { maxCount: 300, branch: selectedBranch, all: !selectedBranch })
+      const [statusRes, branchesRes, historyRes, tagsRes] = await Promise.all([
+        window.api.getStatus(state.currentRepoPath).catch(e => ({ success: false, error: e.message })),
+        window.api.getBranches(state.currentRepoPath).catch(e => ({ success: false, error: e.message })),
+        window.api.getHistory(state.currentRepoPath, { maxCount: 300, branch: selectedBranch, all: !selectedBranch }).catch(e => ({ success: false, error: e.message })),
+        (window.api.getTags ? window.api.getTags(state.currentRepoPath) : Promise.resolve({ success: true, data: [] })).catch(() => ({ success: true, data: [] }))
       ]);
 
       if (statusRes.success) {
@@ -1072,6 +1143,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         state.branchesData = branchesRes.data;
         renderBranches();
         populateHistoryBranchDropdown();
+      }
+
+      if (tagsRes && tagsRes.success) {
+        state.tagsData = tagsRes.data || [];
+        renderTags();
       }
 
       if (historyRes.success) {
@@ -1461,7 +1537,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       rowEl.className = `graph-row ${isAhead ? 'is-ahead-row' : ''} ${state.selectedCommit?.hash === c.hash ? 'selected' : ''}`;
       rowEl.setAttribute('data-hash', c.hash);
 
-      const relDate = formatRelativeTime(c.date || c.authorDate);
+      const dateInfo = formatCommitTimestamp(c.date || c.authorDate);
       const shortHash = c.shortHash || (c.hash ? c.hash.slice(0, 7) : '');
 
       rowEl.innerHTML = `
@@ -1471,13 +1547,37 @@ document.addEventListener('DOMContentLoaded', async () => {
           </svg>
         </div>
         <div class="graph-info-cell">
-          ${badgesHtml ? `<div class="graph-refs-container">${badgesHtml}</div>` : ''}
-          <span class="graph-commit-subject" title="${escapeHtml(c.message)}">${escapeHtml(c.message)}</span>
-          <span class="graph-commit-author" title="${escapeHtml(c.author_name)}">${escapeHtml(c.author_name)}</span>
-          <span class="graph-commit-date">${relDate}</span>
-          <span class="graph-commit-hash" title="View commit changes">${shortHash}</span>
+          <div class="graph-commit-left-section">
+            ${badgesHtml ? `<div class="graph-refs-container">${badgesHtml}</div>` : ''}
+            <span class="graph-commit-subject" title="${escapeHtml(c.message)}">${escapeHtml(c.message)}</span>
+          </div>
+          <div class="graph-commit-right-meta">
+            <span class="graph-commit-author" title="Author: ${escapeHtml(c.author_name)}">${escapeHtml(c.author_name)}</span>
+            <span class="graph-commit-date" title="Timestamp: ${dateInfo.fullStr} (${dateInfo.relStr})">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.6; flex-shrink: 0;">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span>${dateInfo.relStr}</span>
+            </span>
+            <span class="graph-commit-hash" title="Commit SHA: ${c.hash}">${shortHash}</span>
+            <button class="branch-action-mini-btn btn-row-checkout-commit" title="Checkout commit ${shortHash}">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 14 4 9 9 4"></polyline>
+                <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+              </svg>
+            </button>
+          </div>
         </div>
       `;
+
+      const btnRowCheckout = rowEl.querySelector('.btn-row-checkout-commit');
+      if (btnRowCheckout) {
+        btnRowCheckout.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openCheckoutCommitModal(c);
+        });
+      }
 
       rowEl.addEventListener('click', () => {
         openCommitDetailPage(c);
@@ -1685,6 +1785,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
           <div class="gh-commit-right">
             <button class="btn-hash-pill" title="View commit changes">${shortHash}</button>
+            <button class="branch-btn-icon btn-gh-checkout-commit" title="Checkout commit ${shortHash}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 14 4 9 9 4"></polyline>
+                <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+              </svg>
+            </button>
             <button class="branch-btn-icon btn-gh-copy-hash" title="Copy full SHA">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -1693,6 +1799,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             </button>
           </div>
         `;
+
+        const btnGhCheckout = row.querySelector('.btn-gh-checkout-commit');
+        if (btnGhCheckout) {
+          btnGhCheckout.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openCheckoutCommitModal(commit);
+          });
+        }
 
         row.querySelector('.btn-gh-copy-hash').addEventListener('click', (e) => {
           e.stopPropagation();
@@ -1746,6 +1860,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       navigator.clipboard.writeText(commit.hash);
       showToast(`Copied commit SHA: ${commit.hash}`, 'info');
     };
+
+    if (btnCdCheckoutCommit) {
+      btnCdCheckoutCommit.onclick = () => {
+        openCheckoutCommitModal(commit);
+      };
+    }
 
     // Load Commit Detailed Changes & Diff
     commitFilesTree.innerHTML = '<div style="padding: 12px; color: var(--text-muted); font-size: 11px;">Loading changed files...</div>';
@@ -2628,6 +2748,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     const s = state.statusData;
     if (!s) return;
 
+    // Remote Origin URL in Sidebar
+    const remotes = s.remotes || [];
+    const originRemote = remotes.find(r => r.name === 'origin') || remotes[0];
+    const originUrl = originRemote ? (originRemote.fetchUrl || originRemote.pushUrl || '') : '';
+
+    if (sidebarRemoteUrlWrapper && sidebarRemoteUrlText) {
+      if (originUrl) {
+        sidebarRemoteUrlText.textContent = originUrl;
+        sidebarRemoteUrlWrapper.style.display = 'block';
+        sidebarRemoteUrlWrapper.title = `Remote: ${originUrl}\nClick to copy`;
+      } else {
+        sidebarRemoteUrlWrapper.style.display = 'none';
+      }
+    }
+
     activeRepoBranch.textContent = s.currentBranch;
     btnCommitLabel.textContent = `Commit to ${s.currentBranch}`;
 
@@ -2843,7 +2978,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     refreshRepository();
   }
 
-  // Create Branch List Item Element
+  // Create Branch List Item Element (Matches Reference Mockup)
   function createBranchItemElement(branch, isRemote = false) {
     const li = document.createElement('li');
     const isCurrent = !isRemote && branch.current;
@@ -2852,28 +2987,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     li.className = `branch-item ${isCurrent ? 'active' : ''} ${isAhead ? 'is-ahead-branch' : ''}`;
 
-    // Build status badges
-    let badgesHtml = '';
-    if (isCurrent) {
-      badgesHtml += '<span class="branch-current-badge">HEAD</span>';
-    }
+    // Build status badges (Solid dark badge matching 1↓, 86↓ in mockup)
+    let syncBadgeHtml = '';
     if (!isRemote) {
-      if (branch.ahead > 0) {
-        badgesHtml += `<span class="branch-badge-ahead" title="${branch.ahead} commit(s) ahead of ${escapeHtml(branch.upstream || 'remote')} (Click to view ahead commits)">▲ ${branch.ahead}</span>`;
-      }
-      if (branch.behind > 0) {
-        badgesHtml += `<span class="branch-badge-behind" title="${branch.behind} commit(s) behind ${escapeHtml(branch.upstream || 'remote')}">▼ ${branch.behind}</span>`;
-      }
-      if (branch.isGone) {
-        badgesHtml += '<span class="branch-badge-gone" title="Upstream tracking branch has been deleted on remote">gone</span>';
+      if (branch.ahead > 0 && branch.behind > 0) {
+        syncBadgeHtml = `<span class="branch-sync-badge" title="${branch.ahead} ahead, ${branch.behind} behind"><span class="badge-num branch-badge-ahead-pill">${branch.ahead}</span><span class="sync-arrow">↑</span> <span class="badge-num branch-badge-behind-pill">${branch.behind}</span><span class="sync-arrow">↓</span></span>`;
+      } else if (branch.behind > 0) {
+        syncBadgeHtml = `<span class="branch-sync-badge" title="${branch.behind} commit(s) behind ${escapeHtml(branch.upstream || 'remote')}"><span class="badge-num">${branch.behind}</span><span class="sync-arrow">↓</span></span>`;
+      } else if (branch.ahead > 0) {
+        syncBadgeHtml = `<span class="branch-sync-badge" title="${branch.ahead} commit(s) ahead of ${escapeHtml(branch.upstream || 'remote')}"><span class="badge-num branch-badge-ahead-pill">${branch.ahead}</span><span class="sync-arrow">↑</span></span>`;
+      } else if (branch.isGone) {
+        syncBadgeHtml = '<span class="branch-badge-gone-pill" title="Upstream tracking branch has been deleted on remote">gone</span>';
       } else if (branch.isLocalOnly && !branch.ahead) {
-        badgesHtml += '<span class="branch-badge-local" title="Local branch (not pushed to remote)">local</span>';
-      } else if (branch.upstream && branch.ahead === 0 && branch.behind === 0) {
-        badgesHtml += `<span class="branch-badge-synced" title="Up to date with ${escapeHtml(branch.upstream)}">✓</span>`;
+        syncBadgeHtml = '<span class="branch-badge-local-pill" title="Local branch only">local</span>';
       }
     }
 
-    // Rich Tooltip text
+    // Active Bullet Indicator 'o' (Hollow Circle)
+    const activeBulletHtml = isCurrent
+      ? '<span class="branch-bullet-icon" title="Current Active Branch"><span class="branch-bullet-circle"></span></span>'
+      : '';
+
+    // Tooltip text
     const tooltipLines = [
       branch.name,
       branch.upstream ? `Tracking: ${branch.upstream}` : (!isRemote ? 'Local branch (no remote tracking)' : ''),
@@ -2883,62 +3018,50 @@ document.addEventListener('DOMContentLoaded', async () => {
       branch.relativeDate ? `Updated: ${branch.relativeDate}` : ''
     ].filter(Boolean).join('\n');
 
-    const iconSvg = isRemote
-      ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-           <circle cx="12" cy="12" r="10"></circle>
-           <line x1="2" y1="12" x2="22" y2="12"></line>
-           <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-         </svg>`
-      : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-           <line x1="6" y1="3" x2="6" y2="15"></line>
-           <circle cx="18" cy="6" r="3"></circle>
-           <circle cx="6" cy="18" r="3"></circle>
-           <path d="M18 9a9 9 0 0 1-9 9"></path>
-         </svg>`;
-
     li.innerHTML = `
-      <div class="branch-name-box" title="${escapeHtml(tooltipLines)}">
-        ${iconSvg}
-        <span class="branch-name-text">${escapeHtml(branch.displayName || branch.name)}</span>
-        <div class="branch-status-badges">${badgesHtml}</div>
-      </div>
-      <div class="branch-actions">
+      ${activeBulletHtml}
+      <span class="branch-name-text" title="${escapeHtml(tooltipLines)}">${escapeHtml(branch.displayName || branch.name)}</span>
+      ${syncBadgeHtml}
+      <div class="branch-hover-actions">
         ${!isRemote && branch.ahead > 0 ? `
-          <button class="branch-btn-icon btn-push-branch-quick" title="Push ${branch.ahead} ahead commit(s) to remote">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <button class="branch-action-mini-btn btn-push-branch-quick" title="Push ${branch.ahead} ahead commit(s) to remote">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="12" y1="19" x2="12" y2="5"></line>
               <polyline points="5 12 12 5 19 12"></polyline>
             </svg>
           </button>
         ` : ''}
         ${!isRemote && !branch.current ? `
-          <button class="branch-btn-icon btn-switch-branch" title="Checkout / Switch to this branch">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button class="branch-action-mini-btn btn-switch-branch" title="Checkout / Switch to this branch">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="9 14 4 9 9 4"></polyline>
               <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
             </svg>
           </button>
-        ` : ''}
-        ${isRemote ? `
-          <button class="branch-btn-icon btn-checkout-remote" title="Checkout as local branch">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="9 14 4 9 9 4"></polyline>
-              <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
-            </svg>
-          </button>
-        ` : `
-          <button class="branch-btn-icon btn-merge-from" title="Merge into current branch">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button class="branch-action-mini-btn btn-merge-from" title="Merge into current branch">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="18" cy="18" r="3"></circle>
               <circle cx="6" cy="6" r="3"></circle>
               <path d="M6 9v12"></path>
               <path d="M18 15a9 9 0 0 0-9-9H6"></path>
             </svg>
           </button>
-        `}
-        ${!branch.current ? `
-          <button class="branch-btn-icon delete-btn ${isRemote ? 'btn-del-remote-branch' : 'btn-del-branch'}" title="Delete branch">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button class="branch-action-mini-btn delete-btn btn-del-branch" title="Delete branch">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        ` : ''}
+        ${isRemote ? `
+          <button class="branch-action-mini-btn btn-checkout-remote" title="Checkout as local branch">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 14 4 9 9 4"></polyline>
+              <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+            </svg>
+          </button>
+          <button class="branch-action-mini-btn delete-btn btn-del-remote-branch" title="Delete remote branch">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
             </svg>
@@ -2947,10 +3070,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       </div>
     `;
 
-    // Click on ahead badge switches to commit history of that branch
-    const aheadBadgeEl = li.querySelector('.branch-badge-ahead');
-    if (aheadBadgeEl) {
-      aheadBadgeEl.addEventListener('click', (e) => {
+    // Click on sync badge switches to commit history of that branch
+    const syncBadgeEl = li.querySelector('.branch-sync-badge');
+    if (syncBadgeEl) {
+      syncBadgeEl.addEventListener('click', (e) => {
         e.stopPropagation();
         switchToCommitHistoryForBranch(branch.name);
       });
@@ -2959,7 +3082,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Event Handlers for Local Branches
     if (!isRemote) {
       li.addEventListener('click', async (e) => {
-        if (e.target.closest('.branch-actions')) return;
+        if (e.target.closest('.branch-hover-actions')) return;
         if (!branch.current) {
           await withTaskLoader(`Checking out branch ${branch.name}...`, null, null, async () => {
             const res = await window.api.checkoutBranch(state.currentRepoPath, branch.name);
@@ -3022,6 +3145,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     } else {
       // Event Handlers for Remote Branches
+      li.addEventListener('click', async (e) => {
+        if (e.target.closest('.branch-hover-actions')) return;
+        await withTaskLoader(`Checking out remote branch ${branch.name}...`, null, null, async () => {
+          const res = await window.api.checkoutBranch(state.currentRepoPath, branch.name);
+          if (res.success) {
+            showToast(res.message, 'success');
+            await refreshRepository();
+          } else {
+            showToast(`Checkout remote failed: ${res.error}`, 'error');
+          }
+        });
+      });
+
       const checkoutRemoteBtn = li.querySelector('.btn-checkout-remote');
       if (checkoutRemoteBtn) {
         checkoutRemoteBtn.addEventListener('click', async (e) => {
@@ -3054,14 +3190,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderBranchListGroup(container, branches, isRemote = false, prefixKey = 'local') {
     container.innerHTML = '';
     if (!branches || branches.length === 0) {
-      const emptyMsg = state.branchFilterAhead && !isRemote
-        ? 'No branches with ahead / unpushed commits'
+      const emptyMsg = state.sidebarSearchQuery
+        ? 'No matching branches'
         : (isRemote ? 'No remote branches' : 'No local branches');
-      container.innerHTML = `<li class="branch-item" style="color: var(--text-muted); font-size: 11px; padding: 8px;">${emptyMsg}</li>`;
+      container.innerHTML = `<li class="branch-item" style="color: var(--text-muted); font-size: 11.5px; padding-left: 26px;">${emptyMsg}</li>`;
       return;
     }
 
-    if (state.branchViewMode === 'flat') {
+    if (state.branchViewMode === 'flat' || state.sidebarSearchQuery) {
       branches.forEach(branch => {
         container.appendChild(createBranchItemElement(branch, isRemote));
       });
@@ -3089,7 +3225,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const folderLi = document.createElement('li');
         folderLi.className = `branch-folder-item ${isCollapsed ? 'collapsed' : ''}`;
 
-        const folderAheadCount = folders[folderName].reduce((s, b) => s + (b.ahead || 0), 0);
+        const folderBehindCount = folders[folderName].reduce((s, b) => s + (b.behind || 0), 0);
 
         folderLi.innerHTML = `
           <div class="branch-folder-header" title="Folder: ${escapeHtml(folderName)}">
@@ -3100,7 +3236,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
             </svg>
             <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${escapeHtml(folderName)}</span>
-            ${folderAheadCount > 0 ? `<span class="branch-badge-ahead">▲ ${folderAheadCount}</span>` : ''}
+            ${folderBehindCount > 0 ? `<span class="branch-sync-badge"><span class="badge-num">${folderBehindCount}</span><span class="sync-arrow">↓</span></span>` : ''}
             <span class="folder-badge-count">${folders[folderName].length}</span>
           </div>
           <ul class="branch-folder-children"></ul>
@@ -3136,71 +3272,231 @@ document.addEventListener('DOMContentLoaded', async () => {
     const b = state.branchesData;
     if (!b) return;
 
-    // Calculate Ahead Metrics across local branches
-    const totalAheadCommits = b.local.reduce((sum, branch) => sum + (branch.ahead || 0), 0);
-    const aheadBranchesCount = b.local.filter(branch => (branch.ahead || 0) > 0 || branch.isLocalOnly).length;
-
-    if (badgeTotalAhead) {
-      if (totalAheadCommits > 0) {
-        badgeTotalAhead.textContent = `${totalAheadCommits}`;
-        badgeTotalAhead.style.display = 'inline-flex';
-      } else {
-        badgeTotalAhead.style.display = 'none';
-      }
-    }
-
-    if (localAheadSummary) {
-      if (totalAheadCommits > 0) {
-        localAheadSummary.textContent = `${totalAheadCommits} ahead`;
-        localAheadSummary.style.display = 'inline-flex';
-      } else {
-        localAheadSummary.style.display = 'none';
-      }
-    }
-
-    if (btnFilterAheadView) {
-      btnFilterAheadView.classList.toggle('active', !!state.branchFilterAhead);
-    }
-
     if (btnToggleBranchTree) {
       btnToggleBranchTree.classList.toggle('active', state.branchViewMode === 'tree');
       btnToggleBranchTree.title = state.branchViewMode === 'tree' ? 'Switch to Flat View' : 'Switch to Tree View';
     }
 
-    // Filter local branches if Ahead View filter is active
+    // Filter local branches if search query or Ahead View filter is active
     let displayedLocalBranches = b.local;
-    if (state.branchFilterAhead) {
+    if (state.sidebarSearchQuery) {
+      displayedLocalBranches = b.local.filter(br =>
+        br.name.toLowerCase().includes(state.sidebarSearchQuery)
+      );
+    } else if (state.branchFilterAhead) {
       displayedLocalBranches = b.local.filter(br => (br.ahead > 0) || (br.behind > 0) || br.isLocalOnly);
     }
 
     // Render Local Branches
     renderBranchListGroup(localBranchList, displayedLocalBranches, false, 'local');
 
-    // Render Remote Branches (hidden in Ahead Only view if user is focusing purely on ahead)
-    if (state.branchFilterAhead) {
-      remoteBranchList.innerHTML = '<li class="branch-item" style="color: var(--text-muted); font-size: 11px; padding: 8px;">Filtered (Ahead View)</li>';
-    } else {
-      renderBranchListGroup(remoteBranchList, b.remote, true, 'remote');
+    // Filter and Render Remote Branches
+    let displayedRemoteBranches = b.remote;
+    if (state.sidebarSearchQuery) {
+      displayedRemoteBranches = b.remote.filter(br =>
+        br.name.toLowerCase().includes(state.sidebarSearchQuery)
+      );
     }
+    renderBranchListGroup(remoteBranchList, displayedRemoteBranches, true, 'remote');
   }
 
-  // Setup Ahead View and Tree View Toggle Handlers
-  if (btnFilterAheadView) {
-    btnFilterAheadView.addEventListener('click', () => {
-      state.branchFilterAhead = !state.branchFilterAhead;
-      renderBranches();
-      if (state.branchFilterAhead) {
-        showToast('Ahead View enabled: Showing branches with unpushed / ahead commits', 'info');
+  // Render Tags Explorer in Sidebar
+  function renderTags() {
+    if (!tagsList) return;
+    tagsList.innerHTML = '';
+    const tags = state.tagsData || [];
+
+    if (tagsCountBadge) {
+      if (tags.length > 0) {
+        tagsCountBadge.textContent = `${tags.length}`;
+        tagsCountBadge.style.display = 'inline-block';
+      } else {
+        tagsCountBadge.style.display = 'none';
+      }
+    }
+
+    let displayedTags = tags;
+    if (state.sidebarSearchQuery) {
+      displayedTags = tags.filter(t => t.name.toLowerCase().includes(state.sidebarSearchQuery));
+    }
+
+    if (displayedTags.length === 0) {
+      const msg = state.sidebarSearchQuery ? 'No matching tags' : 'No tags in repository';
+      tagsList.innerHTML = `<li class="tag-item" style="color: var(--text-muted); font-size: 11.5px; padding-left: 26px;">${msg}</li>`;
+      return;
+    }
+
+    displayedTags.forEach(tag => {
+      const li = document.createElement('li');
+      li.className = 'tag-item';
+      const tooltip = [tag.name, tag.commit ? `Commit: ${tag.commit}` : '', tag.subject, tag.relativeDate].filter(Boolean).join('\n');
+      li.innerHTML = `
+        <span class="tag-name-text" title="${escapeHtml(tooltip)}">${escapeHtml(tag.name)}</span>
+        <div class="branch-hover-actions">
+          <button class="branch-action-mini-btn btn-checkout-tag" title="Checkout tag">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 14 4 9 9 4"></polyline>
+              <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+            </svg>
+          </button>
+          <button class="branch-action-mini-btn delete-btn btn-del-tag" title="Delete tag">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+      `;
+
+      li.addEventListener('click', async (e) => {
+        if (e.target.closest('.branch-hover-actions')) return;
+        await withTaskLoader(`Checking out tag '${tag.name}'...`, null, null, async () => {
+          const res = await window.api.checkoutBranch(state.currentRepoPath, tag.name);
+          if (res.success) {
+            showToast(`Checked out tag '${tag.name}'`, 'success');
+            await refreshRepository();
+          } else {
+            showToast(`Checkout tag failed: ${res.error}`, 'error');
+          }
+        });
+      });
+
+      const checkoutTagBtn = li.querySelector('.btn-checkout-tag');
+      if (checkoutTagBtn) {
+        checkoutTagBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          await withTaskLoader(`Checking out tag '${tag.name}'...`, checkoutTagBtn, '...', async () => {
+            const res = await window.api.checkoutBranch(state.currentRepoPath, tag.name);
+            if (res.success) {
+              showToast(`Checked out tag '${tag.name}'`, 'success');
+              await refreshRepository();
+            } else {
+              showToast(`Checkout tag failed: ${res.error}`, 'error');
+            }
+          });
+        });
+      }
+
+      const delTagBtn = li.querySelector('.btn-del-tag');
+      if (delTagBtn) {
+        delTagBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (confirm(`Are you sure you want to delete tag '${tag.name}'?`)) {
+            await withTaskLoader(`Deleting tag '${tag.name}'...`, delTagBtn, '...', async () => {
+              const res = await window.api.deleteTag(state.currentRepoPath, tag.name);
+              if (res.success) {
+                showToast(res.message, 'success');
+                await refreshRepository();
+              } else {
+                showToast(`Delete tag failed: ${res.error}`, 'error');
+              }
+            });
+          }
+        });
+      }
+
+      tagsList.appendChild(li);
+    });
+  }
+
+  // Setup Sidebar Accordions & Search Handlers
+  function initSidebarAccordions() {
+    const sections = [
+      { header: headerBranches, section: sectionBranches, bodyId: 'body-branches' },
+      { header: headerTags, section: sectionTags, bodyId: 'body-tags' },
+      { header: headerRemotes, section: sectionRemotes, bodyId: 'body-remotes' },
+      { header: headerRecentRepos, section: sectionRecentRepos, bodyId: 'body-recent-repos' }
+    ];
+
+    sections.forEach(({ header, section, bodyId }) => {
+      if (header && section) {
+        header.addEventListener('click', () => {
+          const isCollapsed = section.classList.contains('collapsed');
+          section.classList.toggle('collapsed', !isCollapsed);
+          section.classList.toggle('active', isCollapsed);
+          const body = document.getElementById(bodyId);
+          if (body) {
+            body.style.display = isCollapsed ? 'block' : 'none';
+          }
+        });
       }
     });
-  }
 
-  if (btnToggleBranchTree) {
-    btnToggleBranchTree.addEventListener('click', () => {
-      state.branchViewMode = state.branchViewMode === 'tree' ? 'flat' : 'tree';
-      renderBranches();
-      showToast(`Switched to ${state.branchViewMode === 'tree' ? 'Tree View' : 'Flat View'}`, 'info');
-    });
+    if (sidebarSearchInput) {
+      sidebarSearchInput.addEventListener('input', (e) => {
+        state.sidebarSearchQuery = (e.target.value || '').toLowerCase().trim();
+        if (btnClearSidebarSearch) {
+          btnClearSidebarSearch.style.display = state.sidebarSearchQuery ? 'flex' : 'none';
+        }
+        if (state.sidebarSearchQuery) {
+          // Auto-expand sections while searching
+          [sectionBranches, sectionTags, sectionRemotes].forEach(sec => {
+            if (sec) {
+              sec.classList.remove('collapsed');
+              sec.classList.add('active');
+            }
+          });
+          ['body-branches', 'body-tags', 'body-remotes'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'block';
+          });
+        }
+        renderBranches();
+        renderTags();
+      });
+    }
+
+    if (btnClearSidebarSearch) {
+      btnClearSidebarSearch.addEventListener('click', () => {
+        if (sidebarSearchInput) {
+          sidebarSearchInput.value = '';
+          sidebarSearchInput.focus();
+        }
+        state.sidebarSearchQuery = '';
+        btnClearSidebarSearch.style.display = 'none';
+        renderBranches();
+        renderTags();
+      });
+    }
+
+    if (btnToggleBranchTree) {
+      btnToggleBranchTree.addEventListener('click', () => {
+        state.branchViewMode = state.branchViewMode === 'tree' ? 'flat' : 'tree';
+        renderBranches();
+        showToast(`Switched to ${state.branchViewMode === 'tree' ? 'Tree View' : 'Flat View'}`, 'info');
+      });
+    }
+
+    if (btnQuickFetchRemotes) {
+      btnQuickFetchRemotes.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!state.currentRepoPath) return;
+        await withTaskLoader('Fetching remote branches...', btnQuickFetchRemotes, '...', async () => {
+          const res = await window.api.fetch(state.currentRepoPath, 'origin', true);
+          if (res.success) {
+            showToast('Remotes fetched successfully', 'success');
+            await refreshRepository();
+          } else {
+            showToast(`Fetch failed: ${res.error}`, 'error');
+          }
+        });
+      });
+    }
+
+    if (btnCopyRemoteUrl) {
+      btnCopyRemoteUrl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const url = sidebarRemoteUrlText ? sidebarRemoteUrlText.textContent.trim() : '';
+        if (url && url !== 'origin url') {
+          navigator.clipboard.writeText(url);
+          showToast(`Copied remote origin URL: ${url}`, 'success');
+          btnCopyRemoteUrl.classList.add('copied');
+          setTimeout(() => {
+            btnCopyRemoteUrl.classList.remove('copied');
+          }, 1200);
+        }
+      });
+    }
   }
 
   // Git Actions (Stage, Unstage, Commit)
@@ -3365,6 +3661,146 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   });
+
+  // Create Tag Modal Handlers
+  function openCreateTagModal() {
+    if (!state.currentRepoPath) return;
+    if (inputNewTagName) inputNewTagName.value = '';
+    if (inputNewTagMsg) inputNewTagMsg.value = '';
+    if (modalCreateTag) {
+      modalCreateTag.classList.add('active');
+      if (inputNewTagName) inputNewTagName.focus();
+    }
+  }
+
+  if (btnAddTagQuick) {
+    btnAddTagQuick.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openCreateTagModal();
+    });
+  }
+
+  if (btnConfirmCreateTag) {
+    btnConfirmCreateTag.addEventListener('click', async () => {
+      const tagName = inputNewTagName.value.trim();
+      const tagMsg = inputNewTagMsg.value.trim();
+      if (!tagName) {
+        showToast('Please enter a tag name', 'error');
+        inputNewTagName.focus();
+        return;
+      }
+      await withTaskLoader(`Creating tag '${tagName}'...`, btnConfirmCreateTag, 'Creating Tag...', async () => {
+        const res = await window.api.createTag(state.currentRepoPath, tagName, tagMsg);
+        if (res.success) {
+          showToast(res.message, 'success');
+          closeModal(modalCreateTag);
+          await refreshRepository();
+        } else {
+          showToast(`Tag creation failed: ${res.error}`, 'error');
+        }
+      });
+    });
+  }
+
+  // Checkout Commit Modal Handlers
+  let currentTargetCommitForCheckout = null;
+
+  function openCheckoutCommitModal(commit) {
+    if (!state.currentRepoPath || !commit) return;
+    currentTargetCommitForCheckout = commit;
+
+    const shortHash = commit.shortHash || (commit.hash ? commit.hash.slice(0, 7) : '');
+    const commitDate = commit.date || commit.authorDate || '';
+    const dateStr = commitDate ? formatRelativeTime(commitDate) : '';
+
+    if (checkoutCommitHashText) {
+      checkoutCommitHashText.textContent = `${shortHash} (${commit.hash})`;
+    }
+    if (checkoutCommitAuthorDate) {
+      checkoutCommitAuthorDate.textContent = `by ${commit.author_name || 'Unknown'}${dateStr ? ' • ' + dateStr : ''}`;
+    }
+    if (checkoutCommitMsgText) {
+      checkoutCommitMsgText.textContent = commit.message || 'No commit message';
+    }
+
+    // Default to detached HEAD
+    if (radioCheckoutDetached) radioCheckoutDetached.checked = true;
+    if (radioCheckoutNewBranch) radioCheckoutNewBranch.checked = false;
+    if (labelCheckoutDetached) labelCheckoutDetached.classList.add('active');
+    if (labelCheckoutNewBranch) labelCheckoutNewBranch.classList.remove('active');
+    if (groupCheckoutNewBranchName) groupCheckoutNewBranchName.style.display = 'none';
+    if (inputCheckoutNewBranchName) inputCheckoutNewBranchName.value = '';
+
+    if (modalCheckoutCommit) {
+      modalCheckoutCommit.classList.add('active');
+    }
+  }
+
+  if (radioCheckoutDetached && radioCheckoutNewBranch) {
+    radioCheckoutDetached.addEventListener('change', () => {
+      if (radioCheckoutDetached.checked) {
+        if (labelCheckoutDetached) labelCheckoutDetached.classList.add('active');
+        if (labelCheckoutNewBranch) labelCheckoutNewBranch.classList.remove('active');
+        if (groupCheckoutNewBranchName) groupCheckoutNewBranchName.style.display = 'none';
+      }
+    });
+
+    radioCheckoutNewBranch.addEventListener('change', () => {
+      if (radioCheckoutNewBranch.checked) {
+        if (labelCheckoutNewBranch) labelCheckoutNewBranch.classList.add('active');
+        if (labelCheckoutDetached) labelCheckoutDetached.classList.remove('active');
+        if (groupCheckoutNewBranchName) groupCheckoutNewBranchName.style.display = 'block';
+        if (inputCheckoutNewBranchName) inputCheckoutNewBranchName.focus();
+      }
+    });
+
+    if (labelCheckoutDetached) {
+      labelCheckoutDetached.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'INPUT') {
+          radioCheckoutDetached.checked = true;
+          radioCheckoutDetached.dispatchEvent(new Event('change'));
+        }
+      });
+    }
+
+    if (labelCheckoutNewBranch) {
+      labelCheckoutNewBranch.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'INPUT') {
+          radioCheckoutNewBranch.checked = true;
+          radioCheckoutNewBranch.dispatchEvent(new Event('change'));
+        }
+      });
+    }
+  }
+
+  if (btnConfirmCheckoutCommit) {
+    btnConfirmCheckoutCommit.addEventListener('click', async () => {
+      if (!state.currentRepoPath || !currentTargetCommitForCheckout) return;
+
+      const isNewBranch = radioCheckoutNewBranch && radioCheckoutNewBranch.checked;
+      const newBranchName = inputCheckoutNewBranchName ? inputCheckoutNewBranchName.value.trim() : '';
+
+      if (isNewBranch && !newBranchName) {
+        showToast('Please enter a name for the new branch', 'error');
+        if (inputCheckoutNewBranchName) inputCheckoutNewBranchName.focus();
+        return;
+      }
+
+      const commitHash = currentTargetCommitForCheckout.hash;
+      const shortHash = commitHash.slice(0, 7);
+
+      await withTaskLoader(`Checking out commit ${shortHash}...`, btnConfirmCheckoutCommit, 'Checking out...', async () => {
+        const res = await window.api.checkoutCommit(state.currentRepoPath, commitHash, isNewBranch, newBranchName);
+        if (res.success) {
+          showToast(res.message, 'success');
+          closeModal(modalCheckoutCommit);
+          await refreshRepository();
+        } else {
+          showToast(`Checkout failed: ${res.error}`, 'error');
+        }
+      });
+    });
+  }
 
   // Merge Branch Modal
   function openMergeModal(sourceBranch = null) {
@@ -3577,6 +4013,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Initialize UI with last repository if available
+  initSidebarAccordions();
   renderRecentRepos();
   if (state.recentRepos.length > 0) {
     openRepository(state.recentRepos[0]);

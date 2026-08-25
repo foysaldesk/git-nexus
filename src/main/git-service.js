@@ -238,6 +238,61 @@ class GitService {
     }
   }
 
+  async getTags(repoPath) {
+    try {
+      const git = this.getGit(repoPath);
+      let tagsList = [];
+      try {
+        const rawTags = await git.raw([
+          'for-each-ref',
+          '--format=%(refname:short)|%(objectname:short)|%(creatordate:relative)|%(contents:subject)',
+          '--sort=-creatordate',
+          'refs/tags/'
+        ]);
+        const lines = rawTags.trim().split('\n').filter(Boolean);
+        tagsList = lines.map(line => {
+          const parts = line.split('|');
+          return {
+            name: parts[0] || '',
+            commit: parts[1] || '',
+            relativeDate: parts[2] || '',
+            subject: parts[3] || ''
+          };
+        });
+      } catch {
+        const simpleTags = await git.tags();
+        tagsList = (simpleTags.all || []).map(name => ({ name, commit: '', relativeDate: '', subject: '' }));
+      }
+      return { success: true, data: tagsList };
+    } catch (err) {
+      return { success: false, error: err.message, data: [] };
+    }
+  }
+
+  async createTag(repoPath, tagName, message = '') {
+    try {
+      const git = this.getGit(repoPath);
+      if (message) {
+        await git.addAnnotatedTag(tagName, message);
+      } else {
+        await git.addTag(tagName);
+      }
+      return { success: true, message: `Tag '${tagName}' created successfully` };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  async deleteTag(repoPath, tagName) {
+    try {
+      const git = this.getGit(repoPath);
+      await git.raw(['tag', '-d', tagName]);
+      return { success: true, message: `Tag '${tagName}' deleted successfully` };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }
+
   async getAheadCommits(repoPath, branchName, targetBranch = null) {
     try {
       const git = this.getGit(repoPath);
@@ -324,6 +379,33 @@ class GitService {
         await git.checkout(branchName);
       }
       return { success: true, message: `Switched to branch '${branchName}'` };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  async checkoutCommit(repoPath, commitHash, createBranch = false, branchName = '') {
+    try {
+      const git = this.getGit(repoPath);
+      const cleanHash = (commitHash || '').trim();
+      if (!cleanHash) {
+        throw new Error('No commit hash specified');
+      }
+
+      if (createBranch && branchName && branchName.trim()) {
+        const cleanBranch = branchName.trim();
+        await git.checkoutBranch(cleanBranch, cleanHash);
+        return {
+          success: true,
+          message: `Created and switched to new branch '${cleanBranch}' at commit ${cleanHash.substring(0, 7)}`
+        };
+      } else {
+        await git.checkout(cleanHash);
+        return {
+          success: true,
+          message: `Checked out commit ${cleanHash.substring(0, 7)} (detached HEAD)`
+        };
+      }
     } catch (err) {
       return { success: false, error: err.message };
     }

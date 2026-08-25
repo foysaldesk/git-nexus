@@ -145,79 +145,160 @@
 
     <!-- Main Body Area -->
     <div class="main-wrapper">
-      <!-- Left Sidebar: Branches & Remotes -->
+      <!-- Left Sidebar: Branches & Remotes Explorer -->
       <aside class="sidebar">
-        <div class="sidebar-header">
-          <span class="sidebar-title">Repository Explorer</span>
-          <div class="sidebar-header-actions">
-            <button id="btn-filter-ahead-view" class="explorer-mode-btn" title="Ahead View: Show only branches with ahead / unpushed commits">
+        <!-- Top Search Box (Matches Reference Mockup) -->
+        <div class="sidebar-search-wrapper">
+          <div class="sidebar-search-box">
+            <input
+              type="text"
+              id="sidebar-search-input"
+              class="sidebar-search-input"
+              placeholder="Search"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <svg class="sidebar-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <button id="btn-clear-sidebar-search" class="sidebar-search-clear" title="Clear search" style="display: none;">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <polyline points="18 15 12 9 6 15"></polyline>
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
-              <span>Ahead</span>
-              <span id="badge-total-ahead" class="badge-ahead-mini" style="display: none;">0</span>
             </button>
-            <button id="btn-toggle-branch-tree" class="branch-btn-icon" title="Toggle Tree / Flat View">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M6 3v18"></path>
-                <circle cx="6" cy="6" r="3"></circle>
+          </div>
+        </div>
+
+        <!-- Copyable Remote Origin URL Strip -->
+        <div id="sidebar-remote-url-wrapper" class="sidebar-remote-url-wrapper" style="display: none;">
+          <div class="sidebar-remote-url-box" id="btn-copy-remote-url" title="Click to copy remote origin URL">
+            <svg class="sidebar-remote-url-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+            <span id="sidebar-remote-url-text" class="sidebar-remote-url-text">origin url</span>
+            <button class="sidebar-remote-url-copy-btn" id="btn-copy-remote-url-icon" title="Copy URL">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="sidebar-tree-container">
+          <!-- Accordion 1: BRANCHES -->
+          <div class="sidebar-accordion-section active" id="section-branches">
+            <div class="sidebar-accordion-header" id="header-branches">
+              <svg class="accordion-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+              <svg class="accordion-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="6" y1="3" x2="6" y2="15"></line>
+                <circle cx="18" cy="6" r="3"></circle>
                 <circle cx="6" cy="18" r="3"></circle>
-                <path d="M6 12h8"></path>
-                <circle cx="18" cy="12" r="3"></circle>
+                <path d="M18 9a9 9 0 0 1-9 9"></path>
               </svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Local Branches -->
-        <div class="branch-section">
-          <div class="branch-section-title">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span>Local Branches</span>
-              <span id="local-ahead-summary" class="section-ahead-badge" style="display: none;">0 ahead</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 4px;">
-              <button id="btn-add-branch-quick" class="branch-btn-icon" title="New Branch">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-              </button>
-            </div>
-          </div>
-          <ul id="local-branch-list" class="branch-list">
-            <li class="branch-item active">
-              <div class="branch-name-box">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="6" y1="3" x2="6" y2="15"></line>
-                  <circle cx="18" cy="6" r="3"></circle>
-                  <circle cx="6" cy="18" r="3"></circle>
-                  <path d="M18 9a9 9 0 0 1-9 9"></path>
-                </svg>
-                <span class="branch-name-text">main</span>
-                <span class="branch-current-badge">HEAD</span>
+              <span class="accordion-title">BRANCHES</span>
+              <div class="accordion-actions" onclick="event.stopPropagation();">
+                <button id="btn-add-branch-quick" class="accordion-action-btn" title="New Branch">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+                <button id="btn-toggle-branch-tree" class="accordion-action-btn" title="Toggle Tree / Flat View">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 3v18"></path>
+                    <circle cx="6" cy="6" r="3"></circle>
+                    <circle cx="6" cy="18" r="3"></circle>
+                    <path d="M6 12h8"></path>
+                    <circle cx="18" cy="12" r="3"></circle>
+                  </svg>
+                </button>
               </div>
-            </li>
-          </ul>
-        </div>
-
-        <!-- Remote Branches -->
-        <div class="branch-section">
-          <div class="branch-section-title">
-            <span>Remote Branches</span>
+            </div>
+            <div class="sidebar-accordion-body" id="body-branches">
+              <ul id="local-branch-list" class="branch-tree-list">
+                <!-- Branches populated dynamically -->
+              </ul>
+            </div>
           </div>
-          <ul id="remote-branch-list" class="branch-list">
-            <li class="branch-item" style="color: var(--text-muted);">No remotes</li>
-          </ul>
-        </div>
 
-        <!-- Recent Repositories -->
-        <div class="branch-section" style="margin-top: auto; border-top: 1px solid var(--border-subtle);">
-          <div class="branch-section-title">
-            <span>Recent Repositories</span>
+          <!-- Accordion 2: TAGS -->
+          <div class="sidebar-accordion-section collapsed" id="section-tags">
+            <div class="sidebar-accordion-header" id="header-tags">
+              <svg class="accordion-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+              <svg class="accordion-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                <line x1="7" y1="7" x2="7.01" y2="7"></line>
+              </svg>
+              <span class="accordion-title">TAGS</span>
+              <div class="accordion-actions" onclick="event.stopPropagation();">
+                <span id="tags-count-badge" class="accordion-counter" style="display: none;">0</span>
+                <button id="btn-add-tag-quick" class="accordion-action-btn" title="Create New Tag">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="sidebar-accordion-body" id="body-tags" style="display: none;">
+              <ul id="tags-list" class="branch-tree-list">
+                <!-- Tags populated dynamically -->
+              </ul>
+            </div>
           </div>
-          <ul id="recent-repos-list" class="branch-list">
-          </ul>
+
+          <!-- Accordion 3: REMOTES -->
+          <div class="sidebar-accordion-section collapsed" id="section-remotes">
+            <div class="sidebar-accordion-header" id="header-remotes">
+              <svg class="accordion-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+              <svg class="accordion-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
+              </svg>
+              <span class="accordion-title">REMOTES</span>
+              <div class="accordion-actions" onclick="event.stopPropagation();">
+                <button id="btn-quick-fetch-remotes" class="accordion-action-btn" title="Fetch Remote Updates">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="sidebar-accordion-body" id="body-remotes" style="display: none;">
+              <ul id="remote-branch-list" class="branch-tree-list">
+                <!-- Remote branches populated dynamically -->
+              </ul>
+            </div>
+          </div>
+
+          <!-- Accordion 4: RECENT REPOSITORIES -->
+          <div class="sidebar-accordion-section collapsed" id="section-recent-repos" style="margin-top: auto; border-top: 1px solid var(--border-subtle);">
+            <div class="sidebar-accordion-header" id="header-recent-repos">
+              <svg class="accordion-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+              <svg class="accordion-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span class="accordion-title">RECENT REPOSITORIES</span>
+            </div>
+            <div class="sidebar-accordion-body" id="body-recent-repos" style="display: none;">
+              <ul id="recent-repos-list" class="branch-tree-list">
+              </ul>
+            </div>
+          </div>
         </div>
       </aside>
 
@@ -437,6 +518,13 @@
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                       </svg>
                     </button>
+                    <button id="btn-cd-checkout-commit" class="btn btn-secondary" title="Checkout this commit" style="padding: 3px 8px; font-size: 11.5px; display: inline-flex; align-items: center; gap: 5px;">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 14 4 9 9 4"></polyline>
+                        <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+                      </svg>
+                      <span>Checkout</span>
+                    </button>
                   </div>
                 </div>
 
@@ -547,6 +635,108 @@
         <div class="modal-footer">
           <button class="btn modal-cancel-btn">Cancel</button>
           <button id="btn-confirm-create-branch" class="btn btn-primary">Create Branch</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Tag Modal -->
+    <div id="modal-create-tag" class="modal-backdrop">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-header-left">
+            <div class="modal-title-icon-box">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                <line x1="7" y1="7" x2="7.01" y2="7"></line>
+              </svg>
+            </div>
+            <span class="modal-title">Create New Tag</span>
+          </div>
+          <button class="modal-close-icon-btn modal-close-btn" title="Close [Esc]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="input-new-tag-name">Tag Name</label>
+            <input id="input-new-tag-name" type="text" class="form-input" placeholder="e.g. v1.0.0" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="input-new-tag-msg">Message (Optional)</label>
+            <input id="input-new-tag-msg" type="text" class="form-input" placeholder="e.g. Release version 1.0.0" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn modal-cancel-btn">Cancel</button>
+          <button id="btn-confirm-create-tag" class="btn btn-primary">Create Tag</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Checkout Commit Modal -->
+    <div id="modal-checkout-commit" class="modal-backdrop">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-header-left">
+            <div class="modal-title-icon-box">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 14 4 9 9 4"></polyline>
+                <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+              </svg>
+            </div>
+            <span class="modal-title">Checkout Commit</span>
+          </div>
+          <button class="modal-close-icon-btn modal-close-btn" title="Close [Esc]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <!-- Commit Info Preview Box -->
+          <div class="checkout-commit-preview-box">
+            <div class="checkout-commit-hash-row">
+              <span class="commit-meta-pill" style="font-family: var(--font-mono); font-size: 11px;">Commit: <strong id="checkout-commit-hash-text">...</strong></span>
+              <span id="checkout-commit-author-date" style="font-size: 11px; color: var(--text-secondary);">Author</span>
+            </div>
+            <div id="checkout-commit-msg-text" class="checkout-commit-msg">Commit message here</div>
+          </div>
+
+          <!-- Checkout Mode Options -->
+          <div class="form-group" style="margin-top: 6px;">
+            <label class="form-label">Checkout Option</label>
+            <div class="checkout-mode-options">
+              <label class="checkout-mode-radio-label active" id="label-checkout-detached">
+                <input type="radio" name="checkout-commit-mode" id="radio-checkout-detached" value="detached" checked />
+                <div class="radio-content">
+                  <div class="radio-title">Checkout Detached HEAD</div>
+                  <div class="radio-desc">Switch repository to this exact commit state without creating a new branch. (Great for inspecting or testing historical versions)</div>
+                </div>
+              </label>
+
+              <label class="checkout-mode-radio-label" id="label-checkout-new-branch">
+                <input type="radio" name="checkout-commit-mode" id="radio-checkout-new-branch" value="branch" />
+                <div class="radio-content">
+                  <div class="radio-title">Create & Switch to New Branch</div>
+                  <div class="radio-desc">Start a new branch from this commit so you can make new commits safely.</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Branch Name Field (Visible when new branch option is selected) -->
+          <div id="group-checkout-new-branch-name" class="form-group" style="display: none; margin-top: 4px;">
+            <label class="form-label" for="input-checkout-new-branch-name">New Branch Name</label>
+            <input id="input-checkout-new-branch-name" type="text" class="form-input" placeholder="e.g. fix/restore-feature" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn modal-cancel-btn">Cancel</button>
+          <button id="btn-confirm-checkout-commit" class="btn btn-primary">Checkout Commit</button>
         </div>
       </div>
     </div>

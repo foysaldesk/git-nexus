@@ -1066,8 +1066,9 @@ class MultiTabTerminalManager {
     this.setTheme(this.currentThemeId);
     this.setupThemeMenu();
 
-    // Initial Tab
-    this.createTab();
+    // Initial Tab using initialCwd if provided
+    const initialTitle = this.currentCwd ? (this.currentCwd.split(/[\\/]/).filter(Boolean).pop() || null) : null;
+    this.createTab(initialTitle, this.currentCwd);
 
     // Add Tab Button
     if (this.btnAddTab) {
@@ -1096,14 +1097,21 @@ class MultiTabTerminalManager {
       });
     }
 
-    // Listen to Open New Tab request (e.g. from Windows Explorer context menu)
+    // Listen to Open New Tab request (e.g. from main app toolbar or Windows Explorer)
     if (window.api.onTerminalOpenNewTab) {
       window.api.onTerminalOpenNewTab((newCwd) => {
         if (newCwd) {
           const folderName = newCwd.split(/[\\/]/).filter(Boolean).pop() || newCwd;
           this.createTab(folderName, newCwd);
-          this.setCwd(newCwd);
         }
+      });
+    }
+
+    // Listen to session dynamic CWD changes (e.g. cd command executed in shell)
+    if (window.api.onTerminalCwdChanged) {
+      window.api.onTerminalCwdChanged((payload) => {
+        if (!payload || !payload.tabId || !payload.cwd) return;
+        this.updateTabFolder(payload.tabId, payload.cwd);
       });
     }
 
@@ -1323,8 +1331,21 @@ class MultiTabTerminalManager {
     this.tabCounter++;
     const tabId = `tab-${this.tabCounter}`;
     const tabNumber = this.tabCounter;
-    const tabTitle = title || `Terminal ${tabNumber}`;
-    const cwd = initialCwd || this.currentCwd || null;
+
+    // Determine cwd for this tab
+    const activeTab = this.tabs.find(t => t.id === this.activeTabId);
+    const cwd = initialCwd || (activeTab ? activeTab.cwd : this.currentCwd) || null;
+
+    // Determine title for this tab
+    let tabTitle = title;
+    if (!tabTitle) {
+      if (cwd) {
+        const folderName = cwd.split(/[\\/]/).filter(Boolean).pop();
+        tabTitle = folderName || `Terminal ${tabNumber}`;
+      } else {
+        tabTitle = `Terminal ${tabNumber}`;
+      }
+    }
 
     // 1. Create Tab DOM Pill
     const tabEl = document.createElement('div');
@@ -1399,13 +1420,37 @@ class MultiTabTerminalManager {
 
     this.tabs.push(tabObj);
 
-    // Start Backend Session
-    window.api.startTerminal(cwd, tabId);
+    // Start Backend Session & update folder name when session returns resolved cwd
+    window.api.startTerminal(cwd, tabId).then(res => {
+      if (res && res.cwd) {
+        this.updateTabFolder(tabId, res.cwd);
+      }
+    }).catch(() => {});
 
     // Switch to new tab
     this.switchTab(tabId);
 
     return tabObj;
+  }
+
+  updateTabFolder(tabId, cwd) {
+    if (!cwd) return;
+    const tab = this.tabs.find(t => t.id === tabId);
+    if (!tab) return;
+
+    tab.cwd = cwd;
+    const folderName = cwd.split(/[\\/]/).filter(Boolean).pop() || cwd;
+    tab.title = folderName;
+
+    const titleEl = tab.tabEl.querySelector('.term-tab-title');
+    if (titleEl) {
+      titleEl.textContent = folderName;
+      titleEl.title = `${folderName} (${cwd})`;
+    }
+
+    if (this.activeTabId === tabId) {
+      this.updateHeaderCwd(cwd);
+    }
   }
 
   switchTab(tabId) {
@@ -1424,6 +1469,9 @@ class MultiTabTerminalManager {
         t.viewportEl.classList.remove('active');
       }
     });
+
+    // Update Header Pill & Window Title to match this active tab's project location
+    this.updateHeaderCwd(targetTab.cwd);
 
     // Auto scroll tab into view
     targetTab.tabEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
@@ -1515,14 +1563,22 @@ class MultiTabTerminalManager {
     }
   }
 
-  setCwd(repoPath) {
-    this.currentCwd = repoPath;
+  updateHeaderCwd(repoPath) {
     if (repoPath) {
       const folderName = repoPath.split(/[\\/]/).filter(Boolean).pop() || repoPath;
       if (this.cwdTextEl) this.cwdTextEl.textContent = folderName;
       if (this.cwdBadgeEl) this.cwdBadgeEl.title = repoPath;
       document.title = `Git Nexus Terminal - ${repoPath}`;
+    } else {
+      if (this.cwdTextEl) this.cwdTextEl.textContent = 'Terminal';
+      if (this.cwdBadgeEl) this.cwdBadgeEl.title = 'Git Nexus Terminal';
+      document.title = 'Git Nexus Terminal';
     }
+  }
+
+  setCwd(repoPath) {
+    this.currentCwd = repoPath;
+    this.updateHeaderCwd(repoPath);
   }
 
   setupShortcuts() {
@@ -1749,14 +1805,15 @@ class MultiTabTerminalManager {
 // Initialise Controller on DOM Loaded
 document.addEventListener('DOMContentLoaded', () => {
   const manager = new MultiTabTerminalManager();
-  manager.init();
 
   // Read URL query params for initial cwd/repo
   const params = new URLSearchParams(window.location.search);
   const initialCwd = params.get('cwd') || null;
   if (initialCwd) {
-    manager.setCwd(initialCwd);
+    manager.currentCwd = initialCwd;
   }
+
+  manager.init();
 
   // Header Actions
   const btnClear = document.getElementById('btn-standalone-clear');

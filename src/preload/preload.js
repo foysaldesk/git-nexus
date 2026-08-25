@@ -9,12 +9,17 @@ contextBridge.exposeInMainWorld('api', {
   initRepo: (repoPath) => ipcRenderer.invoke('git:initRepo', repoPath),
   getStatus: (repoPath) => ipcRenderer.invoke('git:getStatus', repoPath),
   getBranches: (repoPath) => ipcRenderer.invoke('git:getBranches', repoPath),
+  getTags: (repoPath) => ipcRenderer.invoke('git:getTags', repoPath),
+  createTag: (repoPath, tagName, message) => ipcRenderer.invoke('git:createTag', repoPath, tagName, message),
+  deleteTag: (repoPath, tagName) => ipcRenderer.invoke('git:deleteTag', repoPath, tagName),
   getAheadCommits: (repoPath, branchName, targetBranch) =>
     ipcRenderer.invoke('git:getAheadCommits', repoPath, branchName, targetBranch),
   createBranch: (repoPath, branchName, baseBranch, checkout) =>
     ipcRenderer.invoke('git:createBranch', repoPath, branchName, baseBranch, checkout),
   checkoutBranch: (repoPath, branchName, createIfMissing) =>
     ipcRenderer.invoke('git:checkoutBranch', repoPath, branchName, createIfMissing),
+  checkoutCommit: (repoPath, commitHash, createBranch, branchName) =>
+    ipcRenderer.invoke('git:checkoutCommit', repoPath, commitHash, createBranch, branchName),
   deleteBranch: (repoPath, branchName, isRemote, force) =>
     ipcRenderer.invoke('git:deleteBranch', repoPath, branchName, isRemote, force),
   mergeBranch: (repoPath, sourceBranch, options) =>
@@ -72,6 +77,11 @@ contextBridge.exposeInMainWorld('api', {
     const handler = (_, newCwd) => callback(newCwd);
     ipcRenderer.on('terminal:openNewTab', handler);
     return () => ipcRenderer.removeListener('terminal:openNewTab', handler);
+  },
+  onTerminalCwdChanged: (callback) => {
+    const handler = (_, payload) => callback(payload);
+    ipcRenderer.on('terminal:cwdChanged', handler);
+    return () => ipcRenderer.removeListener('terminal:cwdChanged', handler);
   },
   onRepoOpenPath: (callback) => {
     const handler = (_, repoPath) => callback(repoPath);

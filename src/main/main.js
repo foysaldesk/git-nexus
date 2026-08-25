@@ -84,7 +84,6 @@ function openTerminalWindow(cwd = null) {
     if (terminalWindow.isMinimized()) terminalWindow.restore();
     terminalWindow.focus();
     if (cwd) {
-      terminalService.setCwd(cwd);
       terminalWindow.webContents.send('terminal:openNewTab', cwd);
     }
     return { success: true, windowId: terminalWindow.id };
@@ -137,9 +136,6 @@ function openTerminalWindow(cwd = null) {
   });
 
   terminalService.init(terminalWindow);
-  if (cwd) {
-    terminalService.setCwd(cwd);
-  }
 
   return { success: true, windowId: terminalWindow.id };
 }
@@ -230,6 +226,18 @@ ipcMain.handle('git:getBranches', async (_, repoPath) => {
   return await gitService.getBranches(repoPath);
 });
 
+ipcMain.handle('git:getTags', async (_, repoPath) => {
+  return await gitService.getTags(repoPath);
+});
+
+ipcMain.handle('git:createTag', async (_, repoPath, tagName, message) => {
+  return await gitService.createTag(repoPath, tagName, message);
+});
+
+ipcMain.handle('git:deleteTag', async (_, repoPath, tagName) => {
+  return await gitService.deleteTag(repoPath, tagName);
+});
+
 ipcMain.handle('git:getAheadCommits', async (_, repoPath, branchName, targetBranch) => {
   return await gitService.getAheadCommits(repoPath, branchName, targetBranch);
 });
@@ -248,6 +256,10 @@ ipcMain.handle('git:createBranch', async (_, repoPath, branchName, baseBranch, c
 
 ipcMain.handle('git:checkoutBranch', async (_, repoPath, branchName) => {
   return await gitService.checkoutBranch(repoPath, branchName);
+});
+
+ipcMain.handle('git:checkoutCommit', async (_, repoPath, commitHash, createBranch, branchName) => {
+  return await gitService.checkoutCommit(repoPath, commitHash, createBranch, branchName);
 });
 
 ipcMain.handle('git:deleteBranch', async (_, repoPath, branchName, force) => {

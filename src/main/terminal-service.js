@@ -264,6 +264,9 @@ class TerminalSession {
     // Clear previous screen and print prompt
     this.emitData(`\x1b[2J\x1b[3J\x1b[H${this.getPrompt(false)}`);
     this.emitSuggestions('');
+    if (this.service && this.service.emitCwdChange) {
+      this.service.emitCwdChange(this.currentCwd, this.id);
+    }
 
     return { success: true, cwd: this.currentCwd, tabId: this.id };
   }
@@ -616,6 +619,9 @@ class TerminalSession {
 
       if (fs.existsSync(newPath) && fs.statSync(newPath).isDirectory()) {
         this.currentCwd = newPath;
+        if (this.service && this.service.emitCwdChange) {
+          this.service.emitCwdChange(this.currentCwd, this.id);
+        }
       } else {
         this.emitData(`bash: cd: ${target}: No such file or directory\r\n`);
       }
@@ -630,6 +636,9 @@ class TerminalSession {
       const drive = trimmed.toUpperCase() + '\\';
       if (fs.existsSync(drive)) {
         this.currentCwd = drive;
+        if (this.service && this.service.emitCwdChange) {
+          this.service.emitCwdChange(this.currentCwd, this.id);
+        }
       }
       this.emitData(this.getPrompt(false));
       this.emitSuggestions('');
@@ -790,6 +799,20 @@ class TerminalService {
     }
   }
 
+  emitCwdChange(cwd, tabId = 'tab-1') {
+    for (const sender of Array.from(this.senders)) {
+      try {
+        if (sender && !sender.isDestroyed() && typeof sender.send === 'function') {
+          sender.send('terminal:cwdChanged', { cwd, tabId });
+        } else {
+          this.senders.delete(sender);
+        }
+      } catch (e) {
+        this.senders.delete(sender);
+      }
+    }
+  }
+
   getSession(tabId = 'tab-1', createIfMissing = true, initialCwd = null) {
     if (this.sessions.has(tabId)) {
       return this.sessions.get(tabId);
@@ -803,14 +826,14 @@ class TerminalService {
     return null;
   }
 
-  startSession(cwd = this.defaultCwd, tabId = 'tab-1') {
-    if (cwd) this.defaultCwd = cwd;
+  startSession(cwd = null, tabId = 'tab-1') {
+    const targetCwd = cwd || this.defaultCwd || process.cwd();
     let session = this.sessions.get(tabId);
     if (!session) {
-      session = new TerminalSession(tabId, cwd || this.defaultCwd, this);
+      session = new TerminalSession(tabId, targetCwd, this);
       this.sessions.set(tabId, session);
     }
-    return session.startSession(cwd || this.defaultCwd);
+    return session.startSession(targetCwd);
   }
 
   clearSession(tabId = 'tab-1') {
@@ -840,13 +863,13 @@ class TerminalService {
     if (newCwd && fs.existsSync(newCwd)) {
       this.defaultCwd = newCwd;
       if (tabId) {
-        const session = this.getSession(tabId, true, newCwd);
-        session.startSession(newCwd);
-      } else {
-        // If tabId is not specified, update tab-1 or start it
-        const session = this.getSession('tab-1', true, newCwd);
-        session.startSession(newCwd);
+        // Only update specific tab if explicitly targeted
+        const session = this.sessions.get(tabId);
+        if (session) {
+          session.startSession(newCwd);
+        }
       }
+      // Do NOT reset tab-1 when tabId is null! Keep all active sessions running!
     }
   }
 
