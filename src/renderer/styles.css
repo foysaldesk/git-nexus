@@ -137,13 +137,14 @@ header.app-header {
   gap: 12px;
   z-index: 10;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .brand-section {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 220px;
+  flex-shrink: 0;
 }
 
 .brand-logo {
@@ -170,7 +171,7 @@ header.app-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex: 1;
+  flex-shrink: 0;
   max-width: 480px;
 }
 
@@ -206,6 +207,35 @@ header.app-header {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-left: auto;
+  min-width: 0;
+  flex-shrink: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+.header-actions > * {
+  flex-shrink: 0;
+}
+
+.header-actions::-webkit-scrollbar {
+  height: 4px;
+}
+
+.header-actions::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.header-actions::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.header-actions::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 .btn {
