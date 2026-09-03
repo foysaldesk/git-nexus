@@ -958,12 +958,22 @@ class TerminalService {
       }
     } else if (platform === 'darwin') {
       try {
-        const child = spawn('open', ['-a', 'Terminal', targetCwd], {
+        let appName = 'Terminal';
+        if (terminalType === 'iterm' || terminalType === 'iterm2') {
+          appName = 'iTerm';
+        } else if (terminalType === 'warp') {
+          appName = 'Warp';
+        } else if (terminalType === 'alacritty') {
+          appName = 'Alacritty';
+        } else if (terminalType === 'terminal-app' || terminalType === 'default') {
+          appName = 'Terminal';
+        }
+        const child = spawn('open', ['-a', appName, targetCwd], {
           detached: true,
           stdio: 'ignore'
         });
         child.unref();
-        return { success: true, terminal: 'Terminal.app' };
+        return { success: true, terminal: appName };
       } catch (e) {
         return { success: false, error: e.message };
       }

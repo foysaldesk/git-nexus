@@ -93,6 +93,7 @@ contextBridge.exposeInMainWorld('api', {
   registerContextMenu: () => ipcRenderer.invoke('contextMenu:register'),
   unregisterContextMenu: () => ipcRenderer.invoke('contextMenu:unregister'),
   isContextMenuRegistered: () => ipcRenderer.invoke('contextMenu:isRegistered'),
-  createDesktopShortcut: () => ipcRenderer.invoke('system:createDesktopShortcut')
+  createDesktopShortcut: () => ipcRenderer.invoke('system:createDesktopShortcut'),
+  getAppInfo: () => ipcRenderer.invoke('app:getInfo')
 });
 

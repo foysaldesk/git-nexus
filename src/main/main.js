@@ -468,7 +468,23 @@ ipcMain.handle('contextMenu:isRegistered', async () => {
   return await contextMenuService.isRegistered();
 });
 
+// IPC Handlers: Application Information
+ipcMain.handle('app:getInfo', async () => {
+  const packageJson = require('../../package.json');
+  return {
+    name: packageJson.productName || 'Git Nexus',
+    version: packageJson.version || '1.0.2',
+    description: packageJson.description || 'Modern Graphical Git Repository Manager and Terminal',
+    electron: process.versions.electron || '34.2.0',
+    chrome: process.versions.chrome || '',
+    node: process.versions.node || '',
+    platform: process.platform === 'darwin' ? 'macOS' : (process.platform === 'win32' ? 'Windows' : process.platform),
+    arch: process.arch
+  };
+});
+
 // IPC Handlers: Desktop / System Shortcuts
 ipcMain.handle('system:createDesktopShortcut', async () => {
   return await contextMenuService.createDesktopShortcut();
 });
+
