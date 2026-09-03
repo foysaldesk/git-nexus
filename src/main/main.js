@@ -5,8 +5,23 @@ const gitService = require('./git-service');
 const terminalService = require('./terminal-service');
 const contextMenuService = require('./context-menu-service');
 
+// Set Application User Model ID for Windows
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.gitnexus.desktop');
+}
+
 let mainWindow = null;
 let terminalWindow = null;
+
+function getAssetPath(...relativePaths) {
+  if (app.isPackaged) {
+    const unpackedPath = path.join(process.resourcesPath, 'app.asar.unpacked', ...relativePaths);
+    if (fs.existsSync(unpackedPath)) {
+      return unpackedPath;
+    }
+  }
+  return path.join(__dirname, '../../', ...relativePaths);
+}
 
 function parseLaunchArgs(argv) {
   let isTerminalLaunch = false;
@@ -39,8 +54,8 @@ function createWindow(initialRepoPath = null) {
   Menu.setApplicationMenu(null);
 
   const iconPath = process.platform === 'win32'
-    ? path.join(__dirname, '../../assets/icon.ico')
-    : path.join(__dirname, '../../assets/icon.png');
+    ? getAssetPath('assets', 'icon.ico')
+    : getAssetPath('assets', 'icon.png');
 
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -59,6 +74,18 @@ function createWindow(initialRepoPath = null) {
       sandbox: false
     }
   });
+
+  if (process.platform === 'win32') {
+    mainWindow.setAppDetails({
+      appId: 'com.gitnexus.desktop',
+      appIconPath: iconPath,
+      appIconIndex: 0,
+      relaunchCommand: app.isPackaged
+        ? `"${process.execPath}"`
+        : `"${process.execPath}" "${path.resolve(__dirname, '../../')}"`,
+      relaunchDisplayName: 'Git Nexus'
+    });
+  }
 
   mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
@@ -90,8 +117,8 @@ function openTerminalWindow(cwd = null) {
   }
 
   const terminalIconPath = process.platform === 'win32'
-    ? path.join(__dirname, '../../assets/terminal-icon.ico')
-    : path.join(__dirname, '../../assets/terminal-icon.png');
+    ? getAssetPath('assets', 'terminal-icon.ico')
+    : getAssetPath('assets', 'terminal-icon.png');
 
   terminalWindow = new BrowserWindow({
     width: 960,
@@ -110,6 +137,18 @@ function openTerminalWindow(cwd = null) {
       sandbox: false
     }
   });
+
+  if (process.platform === 'win32') {
+    terminalWindow.setAppDetails({
+      appId: 'com.gitnexus.desktop.terminal',
+      appIconPath: terminalIconPath,
+      appIconIndex: 0,
+      relaunchCommand: app.isPackaged
+        ? `"${process.execPath}" --terminal`
+        : `"${process.execPath}" "${path.resolve(__dirname, '../../')}" --terminal`,
+      relaunchDisplayName: 'Git Nexus Terminal'
+    });
+  }
 
   terminalWindow.setMenuBarVisibility(false);
   terminalWindow.loadFile(path.join(__dirname, '../renderer/terminal-window.html'), {
