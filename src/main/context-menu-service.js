@@ -10,9 +10,20 @@ class ContextMenuService {
   }
 
   getExecutablePath() {
+    // If running as electron-builder portable app, the permanent exe path is in PORTABLE_EXECUTABLE_FILE
+    if (process.env.PORTABLE_EXECUTABLE_FILE && fs.existsSync(process.env.PORTABLE_EXECUTABLE_FILE)) {
+      return process.env.PORTABLE_EXECUTABLE_FILE;
+    }
+
     if (app && app.isPackaged) {
+      // If process.execPath is in a temporary folder (like a temp unpack) and an installed version exists, prefer installed
+      const installedExe = path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Git Nexus', 'Git Nexus.exe');
+      if (process.execPath.toLowerCase().includes('\\appdata\\local\\temp\\') && fs.existsSync(installedExe)) {
+        return installedExe;
+      }
       return process.execPath;
     }
+
     // In development mode: electron.exe from node_modules
     const devElectron = path.resolve(__dirname, '../../node_modules/electron/dist/electron.exe');
     if (fs.existsSync(devElectron)) {

@@ -11,7 +11,7 @@ if (process.platform === 'win32') {
   const iconPath = path.join(projectRoot, 'assets', 'terminal-icon.ico');
   const electronPath = path.join(projectRoot, 'node_modules', 'electron', 'dist', 'electron.exe');
   const targetExe = fs.existsSync(electronPath) ? electronPath : process.execPath;
-  const commandStr = `"${targetExe}" "${projectRoot}" --terminal "%V"`;
+  const commandStr = `\\"${targetExe}\\" \\"${projectRoot}\\" --terminal \\"%V\\"`;
 
   const folderKey = `HKCU\\Software\\Classes\\Directory\\shell\\${menuKeyName}`;
   const bgKey = `HKCU\\Software\\Classes\\Directory\\Background\\shell\\${menuKeyName}`;
@@ -22,11 +22,11 @@ if (process.platform === 'win32') {
 
   try {
     execSync(`reg add "${folderKey}" /ve /d "${menuTitle}" /f`, { stdio: 'inherit' });
-    execSync(`reg add "${folderKey}" /v "Icon" /d "${iconPath}" /f`, { stdio: 'inherit' });
+    execSync(`reg add "${folderKey}" /v "Icon" /d "\\"${iconPath}\\"" /f`, { stdio: 'inherit' });
     execSync(`reg add "${folderKey}\\command" /ve /d "${commandStr}" /f`, { stdio: 'inherit' });
 
     execSync(`reg add "${bgKey}" /ve /d "${menuTitle}" /f`, { stdio: 'inherit' });
-    execSync(`reg add "${bgKey}" /v "Icon" /d "${iconPath}" /f`, { stdio: 'inherit' });
+    execSync(`reg add "${bgKey}" /v "Icon" /d "\\"${iconPath}\\"" /f`, { stdio: 'inherit' });
     execSync(`reg add "${bgKey}\\command" /ve /d "${commandStr}" /f`, { stdio: 'inherit' });
 
     console.log('\n[SUCCESS] "Open in Git Nexus Terminal" has been registered to your Windows right-click context menu!');
