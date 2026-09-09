@@ -2157,15 +2157,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         commitDiffsStream.appendChild(card);
       });
 
-      toolbar.querySelector('#btn-stream-expand-all').addEventListener('click', async () => {
-        const cards = Array.from(commitDiffsStream.querySelectorAll('.file-diff-card'));
-        await Promise.all(cards.map(c => expandCard(c)));
-      });
+      const btnExpandAll = toolbar.querySelector('#btn-stream-expand-all');
+      const btnCollapseAll = toolbar.querySelector('#btn-stream-collapse-all');
 
-      toolbar.querySelector('#btn-stream-collapse-all').addEventListener('click', () => {
-        const cards = commitDiffsStream.querySelectorAll('.file-diff-card');
-        cards.forEach(c => collapseCard(c));
-      });
+      if (btnExpandAll) {
+        btnExpandAll.addEventListener('click', async () => {
+          const originalContent = btnExpandAll.innerHTML;
+          btnExpandAll.disabled = true;
+          btnExpandAll.innerHTML = `
+            <svg class="spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+            <span>Expanding...</span>
+          `;
+          try {
+            const cards = Array.from(commitDiffsStream.querySelectorAll('.file-diff-card'));
+            await Promise.all(cards.map(c => expandCard(c)));
+          } finally {
+            btnExpandAll.disabled = false;
+            btnExpandAll.innerHTML = originalContent;
+          }
+        });
+      }
+
+      if (btnCollapseAll) {
+        btnCollapseAll.addEventListener('click', () => {
+          const cards = commitDiffsStream.querySelectorAll('.file-diff-card');
+          cards.forEach(c => collapseCard(c));
+        });
+      }
     }
   }
 
@@ -2302,7 +2322,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const extBadge = getFileExtBadge(file.path);
 
     card.innerHTML = `
-      <div class="file-diff-card-header" title="Click to ${isExpanded ? 'collapse' : 'expand'}">
+      <div class="file-diff-card-header" title="Click to ${isExpanded ? 'collapse' : 'expand'}" role="button" tabindex="0" aria-expanded="${isExpanded ? 'true' : 'false'}">
         <div class="file-diff-card-title">
           <span class="diff-toggle-chevron">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -2313,7 +2333,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="file-diff-path-text" title="${escapeHtml(file.path)}">
             ${dirPart ? `<span class="diff-path-dir">${escapeHtml(dirPart)}</span>` : ''}<span class="diff-path-name">${escapeHtml(filePart)}</span>
           </div>
-          <button class="branch-btn-icon btn-copy-filepath" title="Copy file path">
+          <button class="branch-btn-icon btn-copy-filepath" title="Copy file path" aria-label="Copy file path">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -2338,7 +2358,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       </div>
       <div class="file-diff-card-body">
-        ${preloadedDiff ? '' : '<div style="padding: 16px; color: var(--text-muted);">Loading file diff...</div>'}
+        ${preloadedDiff ? '' : '<div style="padding: 16px; color: var(--text-muted); display: flex; align-items: center; gap: 8px;"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Loading file diff...</div>'}
       </div>
     `;
 
@@ -2374,6 +2394,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
 
+    // Keyboard support: Enter / Space toggles card
+    header.addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (card.classList.contains('collapsed')) {
+          await expandCard(card);
+        } else {
+          collapseCard(card);
+        }
+      }
+    });
+
     return card;
   }
 
@@ -2384,7 +2416,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const filePath = card.dataset.filePath;
 
     card.classList.remove('collapsed');
-    if (header) header.title = 'Click to collapse';
+    if (header) {
+      header.title = 'Click to collapse';
+      header.setAttribute('aria-expanded', 'true');
+    }
 
     if (card.dataset.loaded !== 'true' && filePath) {
       await loadCardDiff(card, filePath);
@@ -2397,21 +2432,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     const header = card.querySelector('.file-diff-card-header');
 
     card.classList.add('collapsed');
-    if (header) header.title = 'Click to expand';
+    if (header) {
+      header.title = 'Click to expand';
+      header.setAttribute('aria-expanded', 'false');
+    }
   }
 
   // Load Diff for a Single Card
   async function loadCardDiff(card, filePath) {
     if (!card || !filePath || !state.currentRepoPath || !state.selectedCommit) return;
-    const bodyEl = card.querySelector('.file-diff-card-body');
-    bodyEl.innerHTML = '<div style="padding: 16px; color: var(--text-muted);">Loading file diff...</div>';
+    if (card.dataset.loading === 'true') return;
+    card.dataset.loading = 'true';
 
-    const diffRes = await window.api.getCommitFileDiff(state.currentRepoPath, state.selectedCommit.hash, filePath);
-    if (diffRes.success) {
-      DiffViewer.render(diffRes.diff, bodyEl, filePath);
-      card.dataset.loaded = 'true';
-    } else {
-      bodyEl.innerHTML = `<div style="padding: 16px; color: var(--red-hover);">Failed to load diff: ${diffRes.error}</div>`;
+    const bodyEl = card.querySelector('.file-diff-card-body');
+    bodyEl.innerHTML = `
+      <div style="padding: 16px; color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
+        <svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+        </svg>
+        <span>Loading file diff...</span>
+      </div>
+    `;
+
+    try {
+      const diffRes = await window.api.getCommitFileDiff(state.currentRepoPath, state.selectedCommit.hash, filePath);
+      if (diffRes.success) {
+        DiffViewer.render(diffRes.diff, bodyEl, filePath);
+        card.dataset.loaded = 'true';
+      } else {
+        bodyEl.innerHTML = `<div style="padding: 16px; color: var(--red-hover);">Failed to load diff: ${escapeHtml(diffRes.error || 'Unknown error')}</div>`;
+      }
+    } catch (err) {
+      bodyEl.innerHTML = `<div style="padding: 16px; color: var(--red-hover);">Failed to load diff: ${escapeHtml(err.message)}</div>`;
+    } finally {
+      delete card.dataset.loading;
     }
   }
 

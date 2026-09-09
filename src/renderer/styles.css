@@ -2301,8 +2301,9 @@ main.workspace-content {
   padding: 16px 24px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   background-color: var(--bg-main);
+  min-height: 0;
 }
 
 .diff-stream-toolbar {
@@ -2315,9 +2316,12 @@ main.workspace-content {
   border-radius: var(--radius-md);
   font-size: 12px;
   color: var(--text-secondary);
-  margin-bottom: 4px;
   flex-shrink: 0;
   gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: var(--shadow-sm);
 }
 
 .diff-stream-toolbar-left {
@@ -2392,6 +2396,13 @@ main.workspace-content {
   transform: scale(0.96);
 }
 
+.btn-diff-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .btn-diff-action svg {
   flex-shrink: 0;
 }
@@ -2406,29 +2417,32 @@ main.workspace-content {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .file-diff-card {
+  flex-shrink: 0;
+  width: 100%;
+  min-height: 42px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  background: var(--bg-sidebar);
+  background: var(--bg-panel);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
   transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .file-diff-card.collapsed {
   background: var(--bg-panel);
   border-color: var(--border-color);
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 
 .file-diff-card.collapsed:hover {
   background: var(--bg-card-hover);
   border-color: var(--accent);
   box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
 }
 
 .file-diff-card.active-target {
@@ -2437,8 +2451,10 @@ main.workspace-content {
 }
 
 .file-diff-card-header {
+  height: 42px;
   min-height: 42px;
-  padding: 8px 14px;
+  box-sizing: border-box;
+  padding: 0 14px;
   background: var(--bg-panel);
   border-bottom: 1px solid var(--border-color);
   display: flex;
@@ -2447,9 +2463,6 @@ main.workspace-content {
   gap: 12px;
   font-family: var(--font-mono);
   font-size: 12px;
-  position: sticky;
-  top: 0;
-  z-index: 2;
   cursor: pointer;
   user-select: none;
   transition: background 0.12s ease;
@@ -2526,8 +2539,8 @@ main.workspace-content {
   width: 22px;
   height: 22px;
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 4px;
+  background: var(--border-subtle);
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
   user-select: none;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s ease, background 0.15s ease;
@@ -2542,9 +2555,9 @@ main.workspace-content {
   transform: rotate(0deg);
 }
 
-.file-diff-card:hover .diff-toggle-chevron {
+.file-diff-card-header:hover .diff-toggle-chevron {
   color: var(--accent);
-  background: rgba(88, 166, 255, 0.12);
+  background: var(--accent-glow);
 }
 
 .file-diff-icon {
@@ -2640,6 +2653,21 @@ main.workspace-content {
   font-size: 12px;
   background-color: var(--bg-main);
 }
+
+.file-diff-card-body .vscode-diff-wrapper {
+  height: auto;
+  min-height: 40px;
+}
+
+/* Enhanced Light Theme contrast for file extension badges */
+[data-theme="light"] .ext-php { background: rgba(137, 87, 229, 0.12); color: #6f42c1; border-color: rgba(111, 66, 193, 0.3); }
+[data-theme="light"] .ext-blade { background: rgba(207, 34, 46, 0.1); color: #cf222e; border-color: rgba(207, 34, 46, 0.3); }
+[data-theme="light"] .ext-js, [data-theme="light"] .ext-ts { background: rgba(154, 103, 0, 0.12); color: #9a6700; border-color: rgba(154, 103, 0, 0.3); }
+[data-theme="light"] .ext-json { background: rgba(9, 105, 218, 0.1); color: #0969da; border-color: rgba(9, 105, 218, 0.3); }
+[data-theme="light"] .ext-css, [data-theme="light"] .ext-scss { background: rgba(31, 136, 61, 0.12); color: #1a7f37; border-color: rgba(31, 136, 61, 0.3); }
+[data-theme="light"] .ext-html { background: rgba(191, 57, 137, 0.1); color: #bf3989; border-color: rgba(191, 57, 137, 0.3); }
+[data-theme="light"] .ext-md { background: rgba(9, 105, 218, 0.1); color: #0969da; border-color: rgba(9, 105, 218, 0.3); }
+[data-theme="light"] .ext-py { background: rgba(9, 105, 218, 0.1); color: #0550ae; border-color: rgba(9, 105, 218, 0.3); }
 
 /* ==========================================================================
    Ubuntu Terminal Aesthetic Theme
