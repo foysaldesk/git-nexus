@@ -1080,6 +1080,16 @@ class MultiTabTerminalManager {
       this.fitActive();
     });
 
+    // Clicking anywhere in terminal container focuses active terminal
+    if (this.viewportsContainerEl) {
+      this.viewportsContainerEl.addEventListener('click', () => {
+        const activeTab = this.tabs.find(t => t.id === this.activeTabId);
+        if (activeTab && activeTab.term) {
+          activeTab.term.focus();
+        }
+      });
+    }
+
     // Listen to IPC Data stream
     if (window.api.onTerminalData) {
       window.api.onTerminalData((payload) => {
@@ -1397,6 +1407,11 @@ class MultiTabTerminalManager {
     const fitAddon = new FitAddon.FitAddon();
     term.loadAddon(fitAddon);
     term.open(viewportEl);
+
+    // Clicking viewport focuses terminal
+    viewportEl.addEventListener('click', () => {
+      if (term) term.focus();
+    });
 
     // Keystroke input
     term.onData((data) => {

@@ -47,6 +47,8 @@ class TerminalSession {
     this.currentCwd = cwd || process.cwd();
     this.service = service;
     this.activeChild = null;
+    this.childInputLine = '';
+    this.childCursorPos = 0;
     this.history = [];
     this.historyIndex = -1;
     this.currentLine = '';
@@ -258,6 +260,8 @@ class TerminalSession {
     this.currentCwd = cwd;
     this.currentLine = '';
     this.cursorPos = 0;
+    this.childInputLine = '';
+    this.childCursorPos = 0;
     this.currentGhostSuggestion = '';
     this.historyIndex = this.history.length;
 
@@ -275,6 +279,8 @@ class TerminalSession {
     this.killSession();
     this.currentLine = '';
     this.cursorPos = 0;
+    this.childInputLine = '';
+    this.childCursorPos = 0;
     this.currentGhostSuggestion = '';
     this.historyIndex = this.history.length;
     this.emitData(`\x1b[2J\x1b[3J\x1b[H${this.getPrompt(false)}`);
@@ -282,38 +288,223 @@ class TerminalSession {
     return { success: true, tabId: this.id };
   }
 
+  renderChildLine(oldPos = this.childCursorPos) {
+    let output = '';
+    if (oldPos > 0) {
+      output += `\x1b[${oldPos}D`;
+    }
+    output += '\x1b[K';
+    output += this.childInputLine;
+    const totalBack = this.childInputLine.length - this.childCursorPos;
+    if (totalBack > 0) {
+      output += `\x1b[${totalBack}D`;
+    }
+    this.emitData(output);
+  }
+
+  handleChildInput(data) {
+    if (!this.activeChild) return;
+
+    // 1. Ctrl+C (\x03) -> Kill active child process
+    if (data === '\x03') {
+      try {
+        if (process.platform === 'win32') {
+          spawn('taskkill', ['/pid', this.activeChild.pid.toString(), '/f', '/t']);
+        } else {
+          this.activeChild.kill('SIGINT');
+        }
+      } catch (e) {
+        try { this.activeChild.kill(); } catch (err) { /* ignore */ }
+      }
+      this.activeChild = null;
+      this.childInputLine = '';
+      this.childCursorPos = 0;
+      this.emitData('^C' + this.getPrompt(true));
+      this.emitSuggestions('');
+      return;
+    }
+
+    // 2. Enter key (\r, \n, \r\n)
+    if (data === '\r' || data === '\n' || data === '\r\n') {
+      const lineToSend = this.childInputLine;
+      this.childInputLine = '';
+      this.childCursorPos = 0;
+      this.emitData('\r\n');
+      if (this.activeChild && this.activeChild.stdin && !this.activeChild.stdin.destroyed) {
+        try {
+          const eol = process.platform === 'win32' ? '\r\n' : '\n';
+          this.activeChild.stdin.write(lineToSend + eol);
+        } catch (err) {
+          console.error('Failed to write to child process stdin:', err);
+        }
+      }
+      return;
+    }
+
+    // 3. Backspace (\x7f or \x08)
+    if (data === '\x7f' || data === '\x08') {
+      if (this.childCursorPos > 0) {
+        if (this.childCursorPos === this.childInputLine.length) {
+          // Fast path when erasing at end of typed line
+          this.childInputLine = this.childInputLine.slice(0, -1);
+          this.childCursorPos--;
+          this.emitData('\b \b');
+        } else {
+          // Inside line
+          const oldPos = this.childCursorPos;
+          this.childInputLine = this.childInputLine.slice(0, this.childCursorPos - 1) + this.childInputLine.slice(this.childCursorPos);
+          this.childCursorPos--;
+          this.renderChildLine(oldPos);
+        }
+      }
+      return;
+    }
+
+    // 4. Delete key (\x1b[3~)
+    if (data === '\x1b[3~') {
+      if (this.childCursorPos < this.childInputLine.length) {
+        const oldPos = this.childCursorPos;
+        this.childInputLine = this.childInputLine.slice(0, this.childCursorPos) + this.childInputLine.slice(this.childCursorPos + 1);
+        this.renderChildLine(oldPos);
+      }
+      return;
+    }
+
+    // 5. Left Arrow (\x1b[D)
+    if (data === '\x1b[D') {
+      if (this.childCursorPos > 0) {
+        this.childCursorPos--;
+        this.emitData('\x1b[D');
+      }
+      return;
+    }
+
+    // 6. Right Arrow (\x1b[C)
+    if (data === '\x1b[C') {
+      if (this.childCursorPos < this.childInputLine.length) {
+        this.childCursorPos++;
+        this.emitData('\x1b[C');
+      }
+      return;
+    }
+
+    // 7. Home key (\x1b[H or \x1b[1~)
+    if (data === '\x1b[H' || data === '\x1b[1~') {
+      if (this.childCursorPos > 0) {
+        this.emitData(`\x1b[${this.childCursorPos}D`);
+        this.childCursorPos = 0;
+      }
+      return;
+    }
+
+    // 8. End key (\x1b[F or \x1b[4~)
+    if (data === '\x1b[F' || data === '\x1b[4~') {
+      const diff = this.childInputLine.length - this.childCursorPos;
+      if (diff > 0) {
+        this.emitData(`\x1b[${diff}C`);
+        this.childCursorPos = this.childInputLine.length;
+      }
+      return;
+    }
+
+    // 9. Ctrl+U (\x15) -> Clear line from cursor to start
+    if (data === '\x15') {
+      if (this.childCursorPos > 0) {
+        const oldPos = this.childCursorPos;
+        this.childInputLine = this.childInputLine.slice(this.childCursorPos);
+        this.childCursorPos = 0;
+        this.renderChildLine(oldPos);
+      }
+      return;
+    }
+
+    // 10. Ctrl+K (\x0b) -> Clear line from cursor to end
+    if (data === '\x0b') {
+      const oldPos = this.childCursorPos;
+      this.childInputLine = this.childInputLine.slice(0, this.childCursorPos);
+      this.renderChildLine(oldPos);
+      return;
+    }
+
+    // 11. Ctrl+W (\x17) -> Delete previous word
+    if (data === '\x17') {
+      if (this.childCursorPos > 0) {
+        const oldPos = this.childCursorPos;
+        const before = this.childInputLine.slice(0, this.childCursorPos);
+        const match = before.match(/(\s*\S+|\s+)$/);
+        const delLen = match ? match[0].length : 1;
+        this.childInputLine = before.slice(0, before.length - delLen) + this.childInputLine.slice(this.childCursorPos);
+        this.childCursorPos -= delLen;
+        this.renderChildLine(oldPos);
+      }
+      return;
+    }
+
+    // 12. Multiline or pasted input containing newline(s)
+    if (data.includes('\r') || data.includes('\n')) {
+      const parts = data.split(/\r\n|\r|\n/);
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i].replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
+        if (i < parts.length - 1) {
+          const fullLine = this.childInputLine + part;
+          this.childInputLine = '';
+          this.childCursorPos = 0;
+          this.emitData(part + '\r\n');
+          if (this.activeChild && this.activeChild.stdin && !this.activeChild.stdin.destroyed) {
+            try {
+              const eol = process.platform === 'win32' ? '\r\n' : '\n';
+              this.activeChild.stdin.write(fullLine + eol);
+            } catch (err) {
+              console.error('Failed to write to child process stdin:', err);
+            }
+          }
+        } else if (part.length > 0) {
+          const oldPos = this.childCursorPos;
+          const before = this.childInputLine.slice(0, this.childCursorPos);
+          const after = this.childInputLine.slice(this.childCursorPos);
+          this.childInputLine = before + part + after;
+          this.childCursorPos += part.length;
+          this.renderChildLine(oldPos);
+        }
+      }
+      return;
+    }
+
+    // Ignore other escape sequences (like up/down arrow, function keys)
+    if (data.startsWith('\x1b')) {
+      return;
+    }
+
+    // 13. Regular printable characters
+    const cleanData = data.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
+    if (cleanData.length > 0) {
+      if (this.childCursorPos === this.childInputLine.length) {
+        this.childInputLine += cleanData;
+        this.childCursorPos += cleanData.length;
+        this.emitData(cleanData);
+      } else {
+        const oldPos = this.childCursorPos;
+        const before = this.childInputLine.slice(0, this.childCursorPos);
+        const after = this.childInputLine.slice(this.childCursorPos);
+        this.childInputLine = before + cleanData + after;
+        this.childCursorPos += cleanData.length;
+        this.renderChildLine(oldPos);
+      }
+    }
+  }
+
   write(data) {
     if (this.activeChild) {
       if (this.activeChild.killed || this.activeChild.exitCode !== null) {
         this.activeChild = null;
+        this.childInputLine = '';
+        this.childCursorPos = 0;
       }
     }
 
-    // If a command is actively running, pipe raw data directly to it
+    // If a command is actively running, handle interactive input to it
     if (this.activeChild) {
-      if (data === '\x03') { // Ctrl+C: kill active process
-        try {
-          if (process.platform === 'win32') {
-            spawn('taskkill', ['/pid', this.activeChild.pid.toString(), '/f', '/t']);
-          } else {
-            this.activeChild.kill('SIGINT');
-          }
-        } catch (e) {
-          try { this.activeChild.kill(); } catch (err) { /* ignore */ }
-        }
-        this.activeChild = null;
-        this.emitData('^C' + this.getPrompt(true));
-        this.emitSuggestions('');
-        return;
-      }
-
-      if (this.activeChild.stdin && !this.activeChild.stdin.destroyed) {
-        try {
-          this.activeChild.stdin.write(data);
-        } catch (err) {
-          console.error('Failed to write to child process:', err);
-        }
-      }
+      this.handleChildInput(data);
       return;
     }
 
@@ -686,6 +877,8 @@ class TerminalSession {
         if (closed) return;
         closed = true;
         this.activeChild = null;
+        this.childInputLine = '';
+        this.childCursorPos = 0;
         this.emitData(this.getPrompt(true));
         this.emitSuggestions('');
       };
@@ -697,11 +890,15 @@ class TerminalSession {
         if (closed) return;
         closed = true;
         this.activeChild = null;
+        this.childInputLine = '';
+        this.childCursorPos = 0;
         this.emitData(`\r\nError executing command: ${err.message}\r\n${this.getPrompt(true)}`);
         this.emitSuggestions('');
       });
     } catch (err) {
       this.activeChild = null;
+      this.childInputLine = '';
+      this.childCursorPos = 0;
       this.emitData(`\r\nExecution error: ${err.message}\r\n${this.getPrompt(true)}`);
       this.emitSuggestions('');
     }
@@ -719,6 +916,8 @@ class TerminalSession {
         try { this.activeChild.kill(); } catch (err) { /* ignore */ }
       }
       this.activeChild = null;
+      this.childInputLine = '';
+      this.childCursorPos = 0;
     }
   }
 }
